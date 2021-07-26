@@ -77,6 +77,7 @@ async function socks_server(conn) {
 						phase = 1;
 						info.host = hostString;
 						info.version = 4;
+						info.type = 'domain';
 					} else if ((c === 0x2d) || (c === 0x2e) || (c === 0x5f) || ((c >= 0x41) && (c <= 0x5a)) || ((c >= 0x61) && (c <= 0x7a)) || ((c >= 0x30) && (c <= 0x39))) {
 						hostString += String.fromCharCode(c);
 						hostStringLen++;
@@ -91,6 +92,7 @@ async function socks_server(conn) {
 						state = '4uc';
 						phase = 1;
 						info.version = 4;
+						info.type = 'ipv4';
 					}
 					break;
 				case '5':
@@ -159,6 +161,7 @@ async function socks_server(conn) {
 				case '5r4':
 				case '5r6':
 					info.host = ip.toString(new Buffer(charList));
+					info.type = charList.length > 4 ? 'ipv6' : 'ipv4';
 					state = '5rp';
 					charList = [];
 					charCounter = 2;
@@ -173,6 +176,7 @@ async function socks_server(conn) {
 							throw new Error();
 						}
 					}
+					info.type = 'domain';
 					info.host = domainString;
 					state = '5rp';
 					charList = [];
