@@ -1,3 +1,4 @@
+const net = require('net');
 function readFromSocket(socket) {
 	return new Promise((resolve, reject) => {
 		let handlers = {
