@@ -9,15 +9,15 @@ async function socks_server(conn) {
 	let hostStringLen = 0;
 	let sendError4 = function() {
 		conn.write(new Buffer([0, 0x5b, 0, 0, 0, 0, 0, 0]));
-		conn.end();
+		conn.destroy();
 	};
 	let sendError5auth = function() {
 		conn.write(new Buffer([5, 255]));
-		conn.end();
+		conn.destroy();
 	};
 	let sendError5fail = function() {
 		conn.write(new Buffer([5, 1, 0, 1, 0, 0, 0, 0, 0, 0]));
-		conn.end();
+		conn.destroy();
 	};
 	let sendSuccess5auth = function() {
 		conn.write(new Buffer([5, 0]));
@@ -43,7 +43,7 @@ async function socks_server(conn) {
 					} else if (c === 4) {
 						state = '4';
 					} else {
-						conn.end();
+						conn.destroy();
 						throw new Error("Invalid version");
 					}
 					break;
@@ -106,7 +106,7 @@ async function socks_server(conn) {
 					break;
 				case '5a':
 					let found = false;
-					for (let i of c) {
+					for (let i of charList) {
 						if (i === 0) {
 							found = true;
 							break;
@@ -185,11 +185,11 @@ async function socks_server(conn) {
 				case '5rp':
 					state = '5c';
 					phase = 1;
-					info.port = charList[0] << 8 + charList[1];
+					info.port = (charList[0] << 8) + charList[1];
 					info.version = 5;
 					break;
 				default:
-					conn.end();
+					conn.destroy();
 					throw new Error();
 					break;
 			}
@@ -209,14 +209,23 @@ async function socks_server(conn) {
 }
 function make_socks_client(options) {
 	return async function(origSocket, dest) {
-		let socksClient = await promises_lib.socketConnect(options);
-		socksClient.write(new Buffer[5, 1, 0]);
+		let socksClient = await promises_lib.socketConnect(options, origSocket);
+		socksClient.write(new Buffer([5, 1, 0]));
 		let state = 'i';
 		let charsLeft = 2;
 		let aBuf = [];
 		let phase = 0;
 		while (true) {
 			let nextBuf = await promises_lib.readFromSocket(socksClient);
+			if ((!nextBuf) || (nextBuf.length === 0)) {
+				/*
+				if (dest.sendOnReject) {
+					origSocket.write(dest.sendOnReject);
+				}*/
+				origSocket.destroy();
+				socksClient.destroy();
+				throw new Error();
+			}
 			let i = -1;
 			for (let c of nextBuf) {
 				i++;
@@ -257,7 +266,8 @@ function make_socks_client(options) {
 						}
 						break;
 					case 'x':
-						if ((aBuf[0] === 5) && (aBuf[1] === 1) && (aBuf[2] === 0)) {
+						// console.log(aBuf);
+						if ((aBuf[0] === 5) && (aBuf[1] === 0) && (aBuf[2] === 0)) {
 							state = 'done';
 							switch (aBuf[3]) {
 								case 1:
@@ -279,11 +289,11 @@ function make_socks_client(options) {
 							if (dest.sendOnReject) {
 								origSocket.write(dest.sendOnReject);
 							}
-							origSocket.end();
+							origSocket.destroy();
 							throw new Error();
 						}
 						break;
-					case 'u':
+					case 'done':
 						if (dest.sendOnAccept) {
 							origSocket.write(dest.sendOnAccept);
 						}

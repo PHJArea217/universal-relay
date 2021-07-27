@@ -8,7 +8,7 @@ async function transparent_server(conn) {
 }
 async function transparent_connect(origSocket, dest) {
 	try {
-		let newConn = await promises_lib.socketConnect({host: dest.host, port: dest.port});
+		let newConn = await promises_lib.socketConnect({host: dest.host, port: dest.port}, origSocket);
 		if (origSocket.excessBuf) {
 			newConn.write(origSocket.excessBuf);
 		}
