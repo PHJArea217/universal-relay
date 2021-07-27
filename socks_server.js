@@ -26,11 +26,12 @@ async function socks_server(conn) {
 	let phase = 0;
 	while (true) {
 		let nextBuf = await promises_lib.readFromSocket(conn);
+		let charsReadE = 0;
 		for (let c of nextBuf) {
 			if (phase === 1) {
-				excessBuf.push(c);
-				continue;
+				break;
 			}
+			charsReadE++;
 			if (charCounter > 0) {
 				charList.push(c);
 				charCounter--;
@@ -195,7 +196,7 @@ async function socks_server(conn) {
 			}
 		}
 		if (phase === 1) {
-			info.excessBuf = new Buffer(excessBuf);
+			info.excessBuf = nextBuf.slice(charsReadE);
 			if (state === '4uc') {
 				info.sendOnAccept = new Buffer([0, 0x5a, 0, 0, 0, 0, 0, 0]);
 				info.sendOnReject = new Buffer([0, 0x5b, 0, 0, 0, 0, 0, 0]);
