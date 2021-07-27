@@ -16,6 +16,7 @@ function make_server(connReadPromise, ipRewrite, connPromise) {
 			connOut.pipe(socket);
 		} catch (e) {
 			socket.end();
+			e.printStackTrace();
 		}
 	};
 }

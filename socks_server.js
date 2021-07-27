@@ -196,8 +196,115 @@ async function socks_server(conn) {
 		}
 		if (phase === 1) {
 			info.excessBuf = new Buffer(excessBuf);
+			if (state === '4uc') {
+				info.sendOnAccept = new Buffer([0, 0x5a, 0, 0, 0, 0, 0, 0]);
+				info.sendOnReject = new Buffer([0, 0x5b, 0, 0, 0, 0, 0, 0]);
+			} else {
+				info.sendOnAccept = new Buffer([5, 0, 0, 1, 0, 0, 0, 0, 0, 0]);
+				info.sendOnReject = new Buffer([5, 1, 0, 1, 0, 0, 0, 0, 0, 0]);
+			}
 			return info;
 		}
 	}
 }
+function make_socks_client(options) {
+	return async function(origSocket, dest) {
+		let socksClient = await promises_lib.socketConnect(options);
+		socksClient.write(new Buffer[5, 1, 0]);
+		let state = 'i';
+		let charsLeft = 2;
+		let aBuf = [];
+		let phase = 0;
+		while (true) {
+			let nextBuf = await promises_lib.readFromSocket(socksClient);
+			let i = -1;
+			for (let c of nextBuf) {
+				i++;
+				if (charsLeft > 0) {
+					aBuf.push(c);
+					charsLeft--;
+				}
+				if (charsLeft > 0) continue;
+				switch (state) {
+					case 'i':
+						if ((aBuf[0] === 5) && (aBuf[1] === 0)) {
+							state = 'x';
+							aBuf = [];
+							charsLeft = 5;
+							socksClient.write(new Buffer([5, 1, 0]));
+							switch (dest.type) {
+								case 'ipv4':
+									socksClient.write(new Buffer([1]));
+									socksClient.write(ip.toBuffer(dest.host));
+									break;
+								case 'domain':
+									let sl = dest.host.length;
+									if (sl > 255) throw new Error();
+									socksClient.write(new Buffer([3, sl]));
+									socksClient.write(dest.host);
+									break;
+								case 'ipv6':
+									socksClient.write(new Buffer([4]));
+									socksClient.write(ip.toBuffer(dest.host));
+									break;
+								default:
+									throw new Error();
+									break;
+							}
+							socksClient.write(new Buffer([dest.port >> 8, dest.port & 0xff]));
+						} else {
+							throw new Error();
+						}
+						break;
+					case 'x':
+						if ((aBuf[0] === 5) && (aBuf[1] === 1) && (aBuf[2] === 0)) {
+							state = 'done';
+							switch (aBuf[3]) {
+								case 1:
+									aBuf = [];
+									charsLeft = 5;
+									break;
+								case 3:
+									charsLeft = aBuf[4] + 2;
+									aBuf = [];
+									break;
+								case 4:
+									aBuf = [];
+									charsLeft = 17;
+									break;
+								default:
+									throw new Error();
+							}
+						} else {
+							if (dest.sendOnReject) {
+								origSocket.write(dest.sendOnReject);
+							}
+							origSocket.end();
+							throw new Error();
+						}
+						break;
+					case 'u':
+						if (dest.sendOnAccept) {
+							origSocket.write(dest.sendOnAccept);
+						}
+						state = 'v';
+						phase = 1;
+						socksClient.write(dest.excessBuf);
+						break;
+					case 'v':
+						if (phase === 1) {
+							phase = 2;
+							origSocket.write(nextBuf.slice(i));
+						}
+						break;
+				}
+				if (phase === 2) break;
+			}
+			if (phase >= 1) {
+				return socksClient;
+			}
+		}
+	};
+}
 exports.socks_server = socks_server;
+exports.make_socks_client = make_socks_client;

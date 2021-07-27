@@ -6,4 +6,22 @@ async function transparent_server(conn) {
 	}
 	return {host: host, port: Number(conn.localPort), excessBuf: null, type: type};
 }
+async function transparent_connect(origSocket, dest) {
+	try {
+		let newConn = await promises_lib.socketConnect({host: dest.host, port: dest.port});
+		if (origSocket.excessBuf) {
+			newConn.write(origSocket.excessBuf);
+		}
+		if (origSocket.sendOnAccept) {
+			origSocket.write(origSocket.sendOnAccept);
+		}
+		return newConn;
+	} catch (e) {
+		if (origSocket.sendOnReject) {
+			origSocket.write(origSocket.sendOnReject);
+		}
+		throw e;
+	}
+}
 exports.transparent_server = transparent_server;
+exports.transparent_connect = transparent_connect;
