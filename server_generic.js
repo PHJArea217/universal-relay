@@ -22,6 +22,8 @@ function make_server(connReadPromise, ipRewrite, connPromise) {
 			} catch (e) {
 			}
 			let connReadAttributes = await connReadPromise(socket);
+			console.log(`[${socket.remoteAddress}]:${socket.remotePort} -> [${socket.localAddress}]:${socket.localPort}` +
+				`${connReadAttributes.type} ${connReadAttributes.host} ${connReadAttributes.port}`);
 			let newDestination = ipRewrite(connReadAttributes);
 			let connOut = await connPromise(socket, newDestination);
 			try {
