@@ -1,3 +1,4 @@
+const promises_lib = require("./common_promises.js");
 async function transparent_server(conn) {
 	let host = String(conn.localAddress);
 	let type = 'ipv4';
@@ -9,16 +10,16 @@ async function transparent_server(conn) {
 async function transparent_connect(origSocket, dest) {
 	try {
 		let newConn = await promises_lib.socketConnect({host: dest.host, port: dest.port}, origSocket);
-		if (origSocket.excessBuf) {
-			newConn.write(origSocket.excessBuf);
+		if (dest.excessBuf) {
+			newConn.write(dest.excessBuf);
 		}
-		if (origSocket.sendOnAccept) {
-			origSocket.write(origSocket.sendOnAccept);
+		if (dest.sendOnAccept) {
+			origSocket.write(dest.sendOnAccept);
 		}
 		return newConn;
 	} catch (e) {
-		if (origSocket.sendOnReject) {
-			origSocket.write(origSocket.sendOnReject);
+		if (dest.sendOnReject) {
+			origSocket.write(dest.sendOnReject);
 		}
 		throw e;
 	}
