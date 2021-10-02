@@ -204,10 +204,12 @@ async function socks_server(conn) {
 				info.sendOnAccept = new Buffer([5, 0, 0, 1, 0, 0, 0, 0, 0, 0]);
 				info.sendOnReject = new Buffer([5, 1, 0, 1, 0, 0, 0, 0, 0, 0]);
 			}
+			info.req = {host: info.host, port: info.port, type: info.type};
 			return info;
 		}
 	}
 }
+/* TODO: multiple destination options */
 function make_socks_client(options) {
 	return async function(origSocket, dest) {
 		let socksClient = await promises_lib.socketConnect(options, origSocket);
@@ -242,26 +244,26 @@ function make_socks_client(options) {
 							aBuf = [];
 							charsLeft = 5;
 							socksClient.write(new Buffer([5, 1, 0]));
-							switch (dest.type) {
+							switch (dest.req.type) {
 								case 'ipv4':
 									socksClient.write(new Buffer([1]));
-									socksClient.write(ip.toBuffer(dest.host));
+									socksClient.write(ip.toBuffer(dest.req.host));
 									break;
 								case 'domain':
-									let sl = dest.host.length;
+									let sl = dest.req.host.length;
 									if (sl > 255) throw new Error();
 									socksClient.write(new Buffer([3, sl]));
-									socksClient.write(dest.host);
+									socksClient.write(dest.req.host);
 									break;
 								case 'ipv6':
 									socksClient.write(new Buffer([4]));
-									socksClient.write(ip.toBuffer(dest.host));
+									socksClient.write(ip.toBuffer(dest.req.host));
 									break;
 								default:
 									throw new Error();
 									break;
 							}
-							socksClient.write(new Buffer([dest.port >> 8, dest.port & 0xff]));
+							socksClient.write(new Buffer([dest.req.port >> 8, dest.req.port & 0xff]));
 						} else {
 							throw new Error();
 						}
@@ -287,25 +289,17 @@ function make_socks_client(options) {
 									throw new Error();
 							}
 						} else {
-							if (dest.sendOnReject) {
-								origSocket.write(dest.sendOnReject);
-							}
-							origSocket.destroy();
 							throw new Error();
 						}
 						break;
 					case 'done':
-						if (dest.sendOnAccept) {
-							origSocket.write(dest.sendOnAccept);
-						}
 						state = 'v';
 						phase = 1;
-						socksClient.write(dest.excessBuf);
 						break;
 					case 'v':
 						if (phase === 1) {
 							phase = 2;
-							origSocket.write(nextBuf.slice(i));
+							dest.sendOnAccept2 = nextBuf.slice(i);
 						}
 						break;
 				}

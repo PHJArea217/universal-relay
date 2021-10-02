@@ -15,17 +15,31 @@ function make_server(connReadPromise, ipRewrite, connPromise) {
 			} catch (e) {
 			}
 		});
+		let connReadAttributes = null;
+		let connOutSuccess = false;
 		try {
 			socket.pause();
 			try {
 				socket.setKeepAlive(true);
 			} catch (e) {
 			}
-			let connReadAttributes = await connReadPromise(socket);
+			connReadAttributes = await connReadPromise(socket);
 			console.log(`[${socket.remoteAddress}]:${socket.remotePort} -> [${socket.localAddress}]:${socket.localPort} ` +
-				`${connReadAttributes.type} ${connReadAttributes.host} ${connReadAttributes.port}`);
-			let newDestination = ipRewrite(connReadAttributes);
-			let connOut = await connPromise(socket, newDestination);
+				`${connReadAttributes.req.type} ${connReadAttributes.req.host} ${connReadAttributes.req.port}`);
+			// console.log(connReadAttributes);
+			let connFunc = await ipRewrite(connReadAttributes, socket); /* Change connReadAttributes.req in some way, return null for default action, or throw exception to indicate error/access denied. */
+			if (connFunc === null) connFunc = connPromise;
+			let connOut = await connFunc(socket, connReadAttributes);
+			connOutSuccess = true;
+			if (connReadAttributes.excessBuf) {
+				connOut.write(connReadAttributes.excessBuf);
+			}
+			if (connReadAttributes.sendOnAccept) {
+				socket.write(connReadAttributes.sendOnAccept);
+			}
+			if (connReadAttributes.sendOnAccept2) {
+				socket.write(connReadAttributes.sendOnAccept2);
+			}
 			try {
 				connOut.setKeepAlive(true);
 			} catch (e) {
@@ -45,6 +59,12 @@ function make_server(connReadPromise, ipRewrite, connPromise) {
 			socket.pipe(connOut);
 			connOut.pipe(socket);
 		} catch (e) {
+			try {
+				if ((!connOutSuccess) && connReadAttributes && connReadAttributes.sendOnReject) {
+					socket.write(connReadAttributes.sendOnReject);
+				}
+			} catch (e2) {
+			}
 			socket.end();
 			socket.destroy();
 //			console.log(e);

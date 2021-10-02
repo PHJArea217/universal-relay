@@ -5,24 +5,26 @@ async function transparent_server(conn) {
 	if (host.indexOf(':') >= 0) {
 		type = 'ipv6';
 	}
-	return {host: host, port: Number(conn.localPort), excessBuf: null, type: type};
+	return {req: {host: host, port: Number(conn.localPort), type: type}, excessBuf: null};
 }
 async function transparent_connect(origSocket, dest) {
-	try {
-		let newConn = await promises_lib.socketConnect({host: dest.host, port: dest.port}, origSocket);
-		if (dest.excessBuf) {
-			newConn.write(dest.excessBuf);
+	let reqArray = Array.isArray(dest.req) ? dest.req : [dest.req];
+	let success = false;
+	let eError = null;
+	for (let req_i of reqArray) {
+		if (origSocket.destroyed) break;
+		try {
+			let newConn = await promises_lib.socketConnect({host: reqArray.host, port: reqArray.port}, origSocket);
+			success = true;
+			break;
+		} catch (e) {
+			eError = e;
 		}
-		if (dest.sendOnAccept) {
-			origSocket.write(dest.sendOnAccept);
-		}
-		return newConn;
-	} catch (e) {
-		if (dest.sendOnReject) {
-			origSocket.write(dest.sendOnReject);
-		}
-		throw e;
 	}
+	if (success) {
+		return newConn;
+	}
+	throw eError;
 }
 exports.transparent_server = transparent_server;
 exports.transparent_connect = transparent_connect;
