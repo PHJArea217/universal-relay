@@ -1,6 +1,11 @@
 const promises_lib = require("./common_promises.js");
 async function transparent_server(conn) {
 	let host = String(conn.localAddress);
+	/* Since the meaning of IPv6 scope IDs for link locals could be different in other network namespaces, trim it off. It's mostly useless here. */
+	let percent_brk = host.indexOf('%');
+	if (percent_brk >= 0) {
+		host = host.substring(0, percent_brk);
+	}
 	let type = 'ipv4';
 	if (host.indexOf(':') >= 0) {
 		type = 'ipv6';
