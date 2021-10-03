@@ -11,10 +11,11 @@ async function transparent_connect(origSocket, dest) {
 	let reqArray = Array.isArray(dest.req) ? dest.req : [dest.req];
 	let success = false;
 	let eError = null;
+	let newConn = null;
 	for (let req_i of reqArray) {
 		if (origSocket.destroyed) break;
 		try {
-			let newConn = await promises_lib.socketConnect({host: reqArray.host, port: reqArray.port}, origSocket);
+			newConn = await promises_lib.socketConnect({host: req_i.host, port: req_i.port}, origSocket);
 			success = true;
 			break;
 		} catch (e) {
