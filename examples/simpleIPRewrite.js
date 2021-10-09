@@ -1,3 +1,4 @@
+const ip = require('ip');
 function makeSimpleIPRewrite(filters) {
 	return async function(attr, socket) {
 		let ipBuf = null;
