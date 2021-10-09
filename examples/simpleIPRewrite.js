@@ -5,6 +5,7 @@ function makeSimpleIPRewrite(filters) {
 			case 'ipv4':
 				ipBuf = ip.toBuffer(attr.req.host);
 				if (ipBuf.length !== 4) throw new Error();
+				break;
 			case 'ipv6':
 				ipBuf = ip.toBuffer(attr.req.host);
 				if (ipBuf.length !== 16) throw new Error();
@@ -28,10 +29,11 @@ function makeSimpleIPRewrite(filters) {
 			host: ipString,
 			hostBuf: ipBuf,
 			port: attr.req.port,
-			connectFunc: null
+			connectFunc: null,
+			attrReqOverride: null
 		};
 		for (let f of filters) {
-			if (f.cidrSubnet.contains(currentData.host)) {
+			if (f.cidrSubnet.contains(currentData.host)) { /* cidrSubnet can simply be {contains: (x) => true} */
 				await f.filter(currentData, socket);
 				if ((currentData.host === null) || (currentData.hostBuf !== null)) { /* Both host and hostBuf are present, or host is missing. */
 					if (currentData.hostBuf === null) {
@@ -42,6 +44,10 @@ function makeSimpleIPRewrite(filters) {
 					currentData.hostBuf = ip.toBuffer(currentData.host);
 				}
 			}
+		}
+		if (currentData.attrReqOverride) {
+			attr.req = currentData.attrReqOverride;
+			return currentData.connectFunc;
 		}
 		let ipResult = ip.toString(currentData.hostBuf);
 		let attrReqResult = {host: ipResult, port: currentData.port};
@@ -54,3 +60,4 @@ function makeSimpleIPRewrite(filters) {
 		return currentData.connectFunc;
 	}
 }
+exports.makeSimpleIPRewrite = makeSimpleIPRewrite;
