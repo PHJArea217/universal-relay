@@ -52,6 +52,13 @@ function makeSimpleIPRewrite(filters) {
 				} else { /* Only in the case where the hostBuf is missing. */
 					currentData.hostBuf = ip.toBuffer(currentData.host);
 				}
+				if (currentData.hostBuf.length === 16) {
+					ipType = 6;
+				} else if (currentData.hostBuf.length === 4) {
+					ipType = 4;
+				} else {
+					throw new Error("currentData.hostBuf must be IPv4 (4 bytes) or IPv6 (16 bytes)");
+				}
 			}
 			if (currentData.attrReqOverride) {
 				attr.req = currentData.attrReqOverride;
@@ -67,6 +74,36 @@ function makeSimpleIPRewrite(filters) {
 		}
 		attr.req = attrReqResult;
 		return currentData.connectFunc;
+	};
+}
+async function blockPrefix(data, socket) {
+	throw new Error(String(data) + " is blocked");
+}
+function makeNAT64(prefix, isCLAT) {
+	if (isCLAT) {
+		let prefixBuffer = ip.toBuffer(prefix);
+		if (prefixBuffer.length !== 16) throw new Error("NAT64 prefix must be IPv6 address");
+		return async function (data, socket) {
+			let newAddress = Buffer.from(prefixBuffer);
+			if (data.hostBuf.length !== 4) {
+				throw new Error("NAT64 CLAT function called on non-IPv4 destination");
+			}
+			data.hostBuf.copy(newAddress, 12, 0, 4);
+			data.hostBuf = newAddress;
+			data.host = null;
+		};
+	} else {
+		return async function(data, socket) {
+			if (data.hostBuf.length !== 16) {
+				throw new Error("NAT64 PLAT function called on non-IPv6 destination");
+			}
+			data.hostBuf = data.hostBuf.slice(12);
+			data.host = null;
+		};
 	}
 }
 exports.makeSimpleIPRewrite = makeSimpleIPRewrite;
+exports.makeBlock = function() {
+	return blockPrefix;
+};
+exports.makeNAT64 = makeNAT64;
