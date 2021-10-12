@@ -2,20 +2,23 @@ const ip = require('ip');
 function makeSimpleIPRewrite(filters) {
 	return async function(attr, socket) {
 		let ipBuf = null;
+		let ipType = 0;
 		switch (attr.req.type) {
 			case 'ipv4':
 				ipBuf = ip.toBuffer(attr.req.host);
 				if (ipBuf.length !== 4) throw new Error();
+				ipType = 4;
 				break;
 			case 'ipv6':
 				ipBuf = ip.toBuffer(attr.req.host);
 				if (ipBuf.length !== 16) throw new Error();
+				ipType = 6;
 				break;
 			default:
 				throw new Error("attr.req.type is not ipv4 or ipv6");
 				break;
 		}
-		if (ipBuf.length === 16) {
+		if (ipType === 6) {
 			let n = 0;
 			for (let i = 0; i < 10; i++) {
 				if (ipBuf[i] === 0) n++;
@@ -34,6 +37,11 @@ function makeSimpleIPRewrite(filters) {
 			attrReqOverride: null
 		};
 		for (let f of filters) {
+			if ((ipType === 4) && (f.ipv4 || f.all)) {
+			} else if ((ipType === 6) && (f.ipv6 || f.all)) {
+			} else {
+				continue;
+			}
 			if (f.cidrSubnet.contains(currentData.host)) { /* cidrSubnet can simply be {contains: (x) => true} */
 				await f.filter(currentData, socket);
 				if ((currentData.host === null) || (currentData.hostBuf !== null)) { /* Both host and hostBuf are present, or host is missing. */
@@ -45,10 +53,10 @@ function makeSimpleIPRewrite(filters) {
 					currentData.hostBuf = ip.toBuffer(currentData.host);
 				}
 			}
-		}
-		if (currentData.attrReqOverride) {
-			attr.req = currentData.attrReqOverride;
-			return currentData.connectFunc;
+			if (currentData.attrReqOverride) {
+				attr.req = currentData.attrReqOverride;
+				return currentData.connectFunc;
+			}
 		}
 		let ipResult = ip.toString(currentData.hostBuf);
 		let attrReqResult = {host: ipResult, port: currentData.port};
