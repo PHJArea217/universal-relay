@@ -26,6 +26,7 @@ function makeSimpleIPRewrite(filters) {
 			if ((n === 10) && (ipBuf[10] === 255) && (ipBuf[11] === 255)) {
 				/* It's a v4-mapped-v6 address */
 				ipBuf = new Buffer([ipBuf[12], ipBuf[13], ipBuf[14], ipBuf[15]]);
+				ipType = 4;
 			}
 		}
 		let ipString = ip.toString(ipBuf);
@@ -42,7 +43,7 @@ function makeSimpleIPRewrite(filters) {
 			} else {
 				continue;
 			}
-			if (f.cidrSubnet.contains(currentData.host)) { /* cidrSubnet can simply be {contains: (x) => true} */
+			if (f.cidrPrefix.contains(currentData.host)) { /* cidrPrefix can simply be {contains: (x) => true} */
 				await f.filter(currentData, socket);
 				if ((currentData.host === null) || (currentData.hostBuf !== null)) { /* Both host and hostBuf are present, or host is missing. */
 					if (currentData.hostBuf === null) {
