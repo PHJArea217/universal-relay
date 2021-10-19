@@ -175,7 +175,7 @@ async function socks_server(conn) {
 				case '5rdr':
 					let domainString = "";
 					for (let bc of charList) {
-						if ((bc === 0x2d) || (bc === 0x2e) || (bc === 0x5f) || ((bc >= 0x41) && (bc <= 0x5a)) || ((bc >= 0x61) && (bc <= 0x7a)) || ((bc >= 0x30) && (bc <= 0x39))) {
+						if ((bc === 0x2d) || (bc === 0x2e) || (bc === 0x5f) || ((bc >= 0x41) && (bc <= 0x5a)) || ((bc >= 0x61) && (bc <= 0x7a)) || ((bc >= 0x30) && (bc <= 0x3a))) {
 							domainString += String.fromCharCode(bc);
 						} else {
 							sendError5fail();
