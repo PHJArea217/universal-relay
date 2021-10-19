@@ -79,7 +79,12 @@ async function socks_server(conn) {
 						info.host = hostString;
 						info.version = 4;
 						info.type = 'domain';
-					} else if ((c === 0x2d) || (c === 0x2e) || (c === 0x5f) || ((c >= 0x41) && (c <= 0x5a)) || ((c >= 0x61) && (c <= 0x7a)) || ((c >= 0x30) && (c <= 0x39))) {
+						/* Colon character allowed due to IPv6 literals, but there
+						 * could be circumstances where it could be confused with
+						 * a port number. Maybe it's up to the filter to do that;
+						 * the included ipRewrite filter (simpleIPRewrite) already
+						 * blocks "domain" requests. */
+					} else if ((c === 0x2d) || (c === 0x2e) || (c === 0x5f) || ((c >= 0x41) && (c <= 0x5a)) || ((c >= 0x61) && (c <= 0x7a)) || ((c >= 0x30) && (c <= 0x3a))) {
 						hostString += String.fromCharCode(c);
 						hostStringLen++;
 						if (hostStringLen > 255) {
