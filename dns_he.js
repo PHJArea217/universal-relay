@@ -1,7 +1,8 @@
 const net = require('net');
-function resolve_dns_dualstack(domainName, dnsResolver, mode) {
+function resolve_dns_dualstack(_domainName, dnsResolver, mode) {
 	return new Promise((resolve, reject) => {
-		if ((domainName.indexOf(':') >= 0) || (/^[0-9.]*$/.matches(domainName))) {
+		let domainName = String(_domainName);
+		if ((domainName.indexOf(':') >= 0) || (domainName.match(/^[0-9.]*$/))) {
 			resolve([domainName]);
 			return;
 		}
@@ -39,7 +40,7 @@ function resolve_dns_dualstack(domainName, dnsResolver, mode) {
 			}
 			resolve(result);
 		};
-		dnsResolver.lookup4(domainName, (err, addresses) => {
+		dnsResolver.resolve4(domainName, (err, addresses) => {
 			if (err) {
 				state.ipv4 = [];
 			} else {
@@ -51,7 +52,7 @@ function resolve_dns_dualstack(domainName, dnsResolver, mode) {
 				setTimeout(nextStepAll, 1000);
 			}
 		});
-		dnsResolver.lookup6(domainName, (err, addresses) => {
+		dnsResolver.resolve6(domainName, (err, addresses) => {
 			if (err) {
 				state.ipv6 = [];
 			} else {
@@ -83,7 +84,8 @@ function connect_HE(req_array, connFunc, addOnAbort) {
 		let tryNewConnection = () => {
 			if (state.done) return;
 			if (req_array.length === 0) return;
-			let conn = connFunc(req_array.shift());
+			let conn = connFunc(req_array[0]);
+			req_array.shift();
 			pendingConnections.push(conn);
 			let onFailureCalled = false;
 			conn.onSuccess(() => {
@@ -131,7 +133,7 @@ function makeIPRewriteDNS(dnsResolver, mode, postIPRewrite) {
 			};
 			try {
 				if ((await postIPRewrite(fakeCRA, socket)) === null) {
-					resultReqs.add(fakeCRA);
+					resultReqs.push(fakeCRA.req);
 				}
 			} catch (e) {
 			}
@@ -146,7 +148,7 @@ function makeIPRewriteDNS(dnsResolver, mode, postIPRewrite) {
 }
 
 function connFuncDirect(reqAttr) {
-	let s = net.createConnection(reqAttr.req);
+	let s = net.createConnection(reqAttr);
 	return {
 		result: s,
 		onSuccess: (func) => s.once('connect', func),
@@ -159,7 +161,7 @@ function connFuncDirect(reqAttr) {
 
 async function simple_connect_HE(socket, connReadAttributes) {
 	let addOnAbort = (f) => socket.on('close', f);
-	let req_array = Array.isArray(connReadAttributes) ? connReadAttributes : [connReadAttributes];
+	let req_array = Array.isArray(connReadAttributes.req) ? connReadAttributes.req : [connReadAttributes.req];
 	return await connect_HE(req_array, connFuncDirect, addOnAbort);
 }
 exports.resolve_dns_dualstack = resolve_dns_dualstack;
