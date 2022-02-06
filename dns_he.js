@@ -1,3 +1,4 @@
+const net = require('net');
 function resolve_dns_dualstack(domainName, dnsResolver, mode) {
 	return new Promise((resolve, reject) => {
 		if ((domainName.indexOf(':') >= 0) || (/^[0-9.]*$/.matches(domainName))) {
@@ -92,6 +93,7 @@ function connect_HE(req_array, connFunc, addOnAbort) {
 				for (let c of pendingConnections) {
 					if ((c !== conn) && (c.abort !== null)) c.abort();
 				}
+				conn.result.pause();
 				resolve(conn.result);
 			});
 			let onFailure = () => {
@@ -119,7 +121,14 @@ function makeIPRewriteDNS(dnsResolver, mode, postIPRewrite) {
 		let resultReqs = [];
 		for (let i of ips) {
 			let j = String(i);
-			let fakeCRA = {req: {type: (j.indexOf(':') >= 0) ? 'ipv6' : 'ipv4', host: j, port: connReadAttributes.req.port}};
+			let fakeCRA = {
+				req: {
+					type: (j.indexOf(':') >= 0) ? 'ipv6' : 'ipv4',
+					host: j,
+					port: connReadAttributes.req.port
+				},
+				originalDomain: connReadAttributes.req.host
+			};
 			try {
 				if ((await postIPRewrite(fakeCRA, socket)) === null) {
 					resultReqs.add(fakeCRA);
@@ -135,3 +144,26 @@ function makeIPRewriteDNS(dnsResolver, mode, postIPRewrite) {
 		}
 	};
 }
+
+function connFuncDirect(reqAttr) {
+	let s = net.createConnection(reqAttr.req);
+	return {
+		result: s,
+		onSuccess: (func) => s.once('connect', func),
+		onFailure: (func) => s.once('error', func),
+		abort: () => {
+			s.destroy();
+		}
+	};
+}
+
+async function simple_connect_HE(socket, connReadAttributes) {
+	let addOnAbort = (f) => socket.on('close', f);
+	let req_array = Array.isArray(connReadAttributes) ? connReadAttributes : [connReadAttributes];
+	return await connect_HE(req_array, connFuncDirect, addOnAbort);
+}
+exports.resolve_dns_dualstack = resolve_dns_dualstack;
+exports.connect_HE = connect_HE;
+exports.makeIPRewriteDNS = makeIPRewriteDNS;
+exports.connFuncDirect = connFuncDirect;
+exports.simple_connect_HE = simple_connect_HE;
