@@ -35,7 +35,8 @@ function makeSimpleIPRewrite(filters) {
 			hostBuf: ipBuf,
 			port: attr.req.port,
 			connectFunc: null,
-			attrReqOverride: null
+			attrReqOverride: null,
+			originalCRA: attr
 		};
 		for (let f of filters) {
 			if ((ipType === 4) && (f.ipv4 || f.all)) {
