@@ -172,7 +172,7 @@ function make_urelay_ip_domain_map(prefix) {
 				return;
 			}
 			let result = [];
-			if (req_path_parts[1] === '.') {
+			if (req_path_parts[1] === '%2e') {
 				if ((req_path_parts[2] === 'SOA') || (req_path_parts[2] === 'ANY')) {
 					result.push({qname: '.', qtype: 'SOA', ttl: 120, content: 'dns-root.u-relay.home.arpa. u-relay.peterjin.org. 1 1000 1000 1000 120'});
 				}
@@ -180,7 +180,7 @@ function make_urelay_ip_domain_map(prefix) {
 					result.push({qname: '.', qtype: 'NS', ttl: 120, content: 'dns-root.u-relay.home.arpa.'});
 				}
 			} else {
-				let qname = req_path_parts[1].toLowerCase();
+				let qname = decodeURIComponent(req_path_parts[1]).toLowerCase();
 				let qtype = req_path_parts[2].toUpperCase();
 				let domain_labels = parse_domain(qname);
 				if (!domain_labels) {
@@ -201,17 +201,24 @@ function make_urelay_ip_domain_map(prefix) {
 					}
 				}
 			}
-			if (result.length === 0) {
-				result = [{qname: req_path_parts[1], qtype: "0", ttl: 0, content: ""}];
-			}
+//			if (result.length === 0) {
+//				result = [{qname: req_path_parts[1], qtype: "0", ttl: 0, content: ""}];
+//			}
 			res.send(200, {result: result});
 		});
 		app.use('/__pdns__/getAllDomainMetadata', function (req, res) {
-			if (req.path === '/') {
+			if (req.path === '/%2e') {
 				res.send(200, {result: {"PRESIGNED": ["0"]}});
 			} else {
 				res.send(200, {result: {}});
 			}
+		});
+		app.use('/dump_data', function (req, res) {
+			let result = [];
+			for (let entry of _result.map_state.byIP) {
+				result.push(entry[1][0] + " " + String(entry[1][1]));
+			}
+			res.send(200, result);
 		});
 	};
 	/* Returns -1n if IP not within prefix, -3n if IP is within prefix
@@ -219,7 +226,7 @@ function make_urelay_ip_domain_map(prefix) {
 	 * static region, and the actual domain name as a string if IP is
 	 * found within dynamic map.
 	 */
-	_result.query_ip = function (ip_buf) {
+	_result.query_ip = function (ip_buf, success_array) {
 		if (ip_buf.byteLength !== 16) return -1n;
 		let full_ip_num = ipToBigInt(ip_buf);
 		let iid = find_urelay_iid(_result.prefix, full_ip_num);
@@ -229,6 +236,7 @@ function make_urelay_ip_domain_map(prefix) {
 		if (iid < 0n) return iid;
 		let entry_result = findEntryByIP(_result.map_state, iid);
 		if (entry_result) {
+			if (success_array) success_array[0] = true;
 			return String(entry_result[0]);
 		}
 		return -3n;
@@ -241,14 +249,17 @@ function make_urelay_ip_domain_map(prefix) {
 	_result.rewrite_CRA_req = function (req) {
 		if (req.type !== 'ipv6') return -1n;
 		try {
-			let result_domain = _result.query_ip(ip.toBuffer(req.host));
-			if (result_domain instanceof String) {
+			let success_array = [false];
+			let result_domain = _result.query_ip(ip.toBuffer(req.host), success_array);
+			if (success_array[0]) {
+//				console.log(result_domain);
 				req.type = 'domain';
 				req.host = result_domain;
 				return -4n;
 			}
 			return result_domain;
 		} catch (e) {
+//			console.log(e);
 			return -3n;
 		}
 		return -3n;
