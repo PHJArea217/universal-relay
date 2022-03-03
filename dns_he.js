@@ -1,10 +1,24 @@
 const net = require('net');
-function resolve_dns_dualstack(_domainName, dnsResolver, mode) {
+const fake_dns = require('./fake_dns.js');
+function resolve_dns_dualstack(_domainName, dnsResolver, mode, overrideFunc) {
 	return new Promise((resolve, reject) => {
-		let domainName = String(_domainName);
-		if ((domainName.indexOf(':') >= 0) || (domainName.match(/^[0-9.]*$/))) {
-			resolve([domainName]);
+		let domainNameX = String(_domainName);
+		if ((domainNameX.indexOf(':') >= 0) || (domainNameX.match(/^[0-9.]*$/))) {
+			resolve([domainNameX]);
 			return;
+		}
+		let domain_parts = fake_dns.parse_domain(domainNameX);
+		if (domain_parts === null) {
+			resolve([]);
+			return;
+		}
+		let domainName = fake_dns.unparse_domain(domain_parts);
+		if (overrideFunc) {
+			let overrideFuncResult = overrideFunc(domain_parts, domainName);
+			if (Array.isArray(overrideFuncResult)) {
+				resolve(overrideFuncResult);
+				return;
+			}
 		}
 		let state = {ipv4: null, ipv6: null, alreadyReturned: false};
 		let nextStepAll = () => {
@@ -117,9 +131,9 @@ function connect_HE(req_array, connFunc, addOnAbort) {
 		setTimeout(tryNewConnection, 500);
 	});
 }
-function makeIPRewriteDNS(dnsResolver, mode, postIPRewrite) {
+function makeIPRewriteDNS(dnsResolver, mode, postIPRewrite, overrideFunc) {
 	return async function(connReadAttributes, socket) {
-		let ips = await resolve_dns_dualstack(connReadAttributes.req.host, dnsResolver, mode);
+		let ips = await resolve_dns_dualstack(connReadAttributes.req.host, dnsResolver, mode, overrideFunc);
 		let resultReqs = [];
 		for (let i of ips) {
 			let j = String(i);
