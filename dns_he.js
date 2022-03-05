@@ -3,7 +3,7 @@ const fake_dns = require('./fake_dns.js');
 function resolve_dns_dualstack(_domainName, dnsResolver, mode, overrideFunc) {
 	return new Promise((resolve, reject) => {
 		let domainNameX = String(_domainName);
-		if ((domainNameX.indexOf(':') >= 0) || (domainNameX.match(/^[0-9.]*$/))) {
+		if (net.isIP(domainNameX)) {
 			resolve([domainNameX]);
 			return;
 		}

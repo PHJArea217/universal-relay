@@ -151,7 +151,7 @@ function make_urelay_ip_gen() {
 		return state.counter;
 	};
 }
-function make_urelay_ip_domain_map(prefix) {
+function make_urelay_ip_domain_map(prefix, dns_overrideFunc) {
 	let _result = {};
 	_result.map_state = make_fake_DNS_state(make_urelay_ip_gen());
 	_result.prefix = prefix;
@@ -187,7 +187,9 @@ function make_urelay_ip_domain_map(prefix) {
 					res.send(400);
 					return;
 				}
-				if (qname.endsWith('.u-relay.home.arpa')) {
+				let overrideResult = dns_overrideFunc ? dns_overrideFunc(domain_labels) : null;
+				if (Array.isArray(overrideResult)) {
+					result = overrideResult;
 				} else {
 					if ((qtype === 'ANY') || (qtype === 'AAAA')) {
 						let result_ip = _result.query_domain(domain_labels);
