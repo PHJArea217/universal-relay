@@ -4,9 +4,10 @@ const server_generic = require('./server_generic.js');
 const transparent_server = require('./transparent_server.js');
 const fake_dns = require('./fake_dns.js');
 const express = require('express');
+const domain_parser = require('./domain_parser.js');
 var pdns_app = express();
 
-var s_obj = fake_dns.make_urelay_ip_domain_map(0xfedb120045007800n);
+var s_obj = fake_dns.make_urelay_ip_domain_map(0xfedb120045007800n, domain_parser.urelay_dns_override);
 s_obj.make_pdns_express_app(pdns_app);
 pdns_app.listen({fd: +process.env.CTRTOOL_NS_OPEN_FILE_FD_4});
 
