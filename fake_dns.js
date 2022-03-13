@@ -189,7 +189,14 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc) {
 				}
 				let overrideResult = dns_overrideFunc ? dns_overrideFunc(domain_labels) : null;
 				if (Array.isArray(overrideResult)) {
-					result = overrideResult;
+					for (let e of overrideResult) {
+						let fullEntry = e.hasOwnProperty('qtype') ? e : {qtype: 'AAAA', content: e};
+						if ((qtype === 'ANY') || (qtype === fullEntry.qtype)) {
+							if (!fullEntry.hasOwnProperty('ttl')) fullEntry.ttl = 60;
+							if (!fullEntry.hasOwnProperty('qname')) fullEntry.qname = qname;
+							result.push(fullEntry);
+						}
+					}
 				} else {
 					if ((qtype === 'ANY') || (qtype === 'AAAA')) {
 						let result_ip = _result.query_domain(domain_labels);
