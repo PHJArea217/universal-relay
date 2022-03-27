@@ -51,11 +51,12 @@ function urelay_handle_special_domain(domain_parts, domainName_unused) {
 	return [];
 }
 function urelay_dns_override(domain_parts) {
+	if (extractSubdomains(domain_parts, ['local'])) return []; /* *.local (mDNS) */
 	if (extractSubdomains(domain_parts, ['arpa', 'ipv4only'])) return []; /* ipv4only.arpa */
 	if (extractSubdomains(domain_parts, ['arpa', 'in-addr'])) return []; /* in-addr.arpa */
 	if (extractSubdomains(domain_parts, ['arpa', 'ip6'])) return []; /* ip6.arpa TODO: generate PTR records for primary ip->domain map */
 	if (extractSubdomains(domain_parts, ['net', 'use-application-dns'])) return []; /* use-application-dns.net */
-	if (extractSubdomains(domain_parts, ['localhost']) return ['::1', {'qtype': 'A', 'content': '127.0.0.1'}];
+	if (extractSubdomains(domain_parts, ['localhost'])) return ['::1', {'qtype': 'A', 'content': '127.0.0.1'}];
 	return null;
 }
 exports.extractSubdomains = extractSubdomains;
