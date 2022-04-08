@@ -31,6 +31,17 @@ function Endpoint() {
 	this.setIPString = function (newIP) {
 		return this.setIPBuffer(ip.toBuffer(newIP));
 	};
+	this.setIPStringWithScope = function (newIP) {
+		let newIPString = String(newIP);
+		let percent_position = newIPString.indexOf('%');
+		if (percent_position >= 0) {
+			this.setIPString(newIPString.substring(0, percent_position));
+			this.options_map_.set('!ipv6_scope', newIPString.substring(percent_position + 1));
+			return this;
+		} else {
+			return this.setIPString(newIPString);
+		}
+	};
 	this.getIPBigInt = function () {
 		return this.ip_;
 	};
@@ -54,8 +65,17 @@ function Endpoint() {
 	};
 	this.setDomain = function (domain) {
 		let d = domain;
+		if (!d) {
+			throw new Error("Domain undefined or null");
+		}
 		if (!Array.isArray(d)) {
 			d = String(domain);
+			/* Corner case for DNS root */
+			if (d === '.') {
+				this.domain_ = [];
+				this.ip_ = 0n;
+				return this;
+			}
 			if (net.isIP(d)) {
 				return this.setIPString(d);
 			}
@@ -89,6 +109,126 @@ function Endpoint() {
 			return this.ip_ & host_mask;
 		}
 		return -1n;
+	};
+	this.getPort = function () {
+		return this.port_;
+	};
+	this.setPort = function (port) {
+		let port_number = Number(port);
+		if (port_number !== Math.floor(port_number)) {
+			throw new Error("Port number must be an integer");
+		}
+		if (!(port_number >= 0)) {
+			throw new Error("Port number must be greater than or equal to 0");
+		}
+		if (!(port_number <= 65535)) {
+			throw new Error("Port number must be less than or equal to 65535");
+		}
+		this.port_ = port_number;
+		return this;
+	};
+	this.getDomain = function () {
+		return this.domain_;
+	};
+	this.getDomainString = function () {
+		if (!this.domain_) return null;
+		if (this.domain_.length === 0) return ".";
+		let d = this.domain_.slice();
+		d.reverse();
+		return d.join('.');
+	};
+	this.getSubdomainsOf = function (base_domain, nr_parts_to_keep) {
+		if (!this.domain_) {
+			return null;
+		}
+		let domain_length = base_domain.length;
+		for (let i = 0; i < domain_length; i++) {
+			if (this.domain_[i] === base_domain[i]) {
+			} else {
+				return null;
+			}
+		}
+		return this.domain_.slice(domain_length, domain_length + nr_parts_to_keep);
+	};
+	this.resolveDynamic = async function (resolver) {
+		let cloned_this = this.clone();
+		if (!this.domain_) {
+			return [cloned_this];
+		}
+		let resolverResult = await resolver(cloned_this.getDomain(), cloned_this.getDomainString(), cloned_this);
+		if (!resolverResult) {
+			return null; /* fall through */
+		}
+		if (resolverResult === true) {
+			return [cloned_this]; /* the resolver called something like setIPString or setDomain on the third argument */
+		}
+		if (!Array.isArray(resolverResult)) {
+			resolverResult = [resolverResult];
+		}
+		let result_array = [];
+		for (let r of resolverResult) {
+			if (r instanceof Endpoint) {
+				result_array.push(r);
+			} else {
+				result_array.push(cloned_this.clone().setDomain(String(r)));
+			}
+		}
+		return result_array;
+	};
+	this.clone = function () {
+		let cloned_this = new Endpoint();
+		cloned_this.ip_ = this.ip_;
+		cloned_this.domain_ = this.domain_ ? this.domain_.slice() : null;
+		cloned_this.port_ = this.port_;
+		for (let e of this.options_map_.entries()) {
+			cloned_this.options_map_.set(e[0], e[1]);
+		}
+		return cloned_this;
+	};
+	this.toCRAreq = function () {
+		if (this.domain_) {
+			return {
+				type: 'domain',
+				host: this.getDomainString(),
+				port: this.getPort(),
+				__orig_endpoint__: this
+			};
+		} else {
+			return {
+				type: (this.getHostNR(0xffff00000000n, 96) >= 0n) ? 'ipv4' : 'ipv6',
+				host: this.getIPString(),
+				port: this.getPort(),
+				__orig_endpoint__: this
+			};
+		}
+	};
+	this.toNCCOptions = function () {
+		let unix_path = this.options_map_.get('!unix_path');
+		if (unix_path) {
+			return {'path': unix_path};
+		}
+		let result_object = {};
+		if (this.domain_) {
+			result_object.host = this.getDomainString();
+		} else {
+			if ((this.ip_ === 0n) || (this.ip_ === 0xffff00000000n)) {
+				throw new Error('IP address is 0.0.0.0 or ::');
+			} else {
+				result_object.host = this.getIPString();
+				if (this.getHostNR(0xfe80n<<112n, 10) >= 0n) {
+					let scope_id = this.options_map_.get('!ipv6_scope');
+					if (scope_id) {
+						result_object.host += '%' + scope_id;
+					}
+				}
+			}
+		}
+		result_object.port = this.getPort();
+		let localAddr = this.options_map_.get('!bind_addr');
+		if (localAddr) {
+			result_object.localAddress = localAddr;
+		}
+		return result_object;
 	};
 }
 exports.Endpoint = Endpoint;
