@@ -162,7 +162,7 @@ function makeIPRewriteDNS(dnsResolver, mode, postIPRewrite, overrideFunc) {
 }
 
 function connFuncDirect(reqAttr) {
-	let s = net.createConnection(reqAttr);
+	let s = net.createConnection(reqAttr.__orig_endpoint__ ? reqAttr.__orig_endpoint__.toNCCOptions() : reqAttr);
 	return {
 		result: s,
 		onSuccess: (func) => s.once('connect', func),

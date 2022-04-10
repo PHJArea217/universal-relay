@@ -230,5 +230,22 @@ function Endpoint() {
 		}
 		return result_object;
 	};
+	this.getHostNRThen = function (prefix, length, callback) {
+		let result = this.getHostNR(prefix, length);
+		if (result >= 0n) {
+			return callback(result, this);
+		}
+		return undefined;
+	};
+	this.getSubdomainsOfThen = function (domain, nr_parts, callback) {
+		let result = this.getSubdomainsOf(domain, nr_parts);
+		if (result) {
+			return callback(result, this);
+		}
+		return undefined;
+	};
 }
 exports.Endpoint = Endpoint;
+exports.fromCRAreq = function (req) {
+	return (new Endpoint()).setDomain(req.host).setPort(req.port);
+}
