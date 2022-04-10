@@ -63,7 +63,7 @@ function Endpoint() {
 	this.getIPString = function () {
 		return ip.toString(this.getIPBuffer());
 	};
-	this.setDomain = function (domain) {
+	this.setDomain2 = function (domain, convert_to_ip) {
 		let d = domain;
 		if (!d) {
 			throw new Error("Domain undefined or null");
@@ -76,7 +76,7 @@ function Endpoint() {
 				this.ip_ = 0n;
 				return this;
 			}
-			if (net.isIP(d)) {
+			if (convert_to_ip && net.isIP(d)) {
 				return this.setIPString(d);
 			}
 			if (d.endsWith('.')) {
@@ -97,6 +97,9 @@ function Endpoint() {
 		this.domain_ = r;
 		this.ip_ = 0n;
 		return this;
+	};
+	this.setDomain = function (domain) {
+		return this.setDomain2(domain, true);
 	};
 	this.getHostNR = function (prefix, length) {
 		let bitmask = 128n - BigInt(length);

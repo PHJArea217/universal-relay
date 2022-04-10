@@ -1,5 +1,6 @@
 const ip = require('ip');
 const fs = require('fs');
+const endpoint = require('./endpoint.js');
 function make_fake_DNS_state(ip_generator) {
 	let result = {};
 	result.byDomain = new Map();
@@ -156,6 +157,7 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc) {
 	_result.map_state = make_fake_DNS_state(make_urelay_ip_gen());
 	_result.prefix = prefix;
 	_result.query_domain = function (domain_parts) {
+		if (!Array.isArray(domain_parts)) return null;
 		let domain_string = unparse_domain(domain_parts);
 		let entry_result = findEntryByDomain(_result.map_state, domain_string);
 		if (entry_result) {
@@ -182,12 +184,14 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc) {
 			} else {
 				let qname = decodeURIComponent(req_path_parts[1]).toLowerCase();
 				let qtype = req_path_parts[2].toUpperCase();
-				let domain_labels = parse_domain(qname);
-				if (!domain_labels) {
+				let domain_labels = new endpoint.Endpoint();
+				try {
+					domain_labels.setDomain2(qname, false);
+				} catch (e) {
 					res.send(400);
 					return;
 				}
-				let overrideResult = dns_overrideFunc ? dns_overrideFunc(domain_labels) : null;
+				let overrideResult = dns_overrideFunc ? dns_overrideFunc(domain_labels.getDomain(), domain_labels) : null;
 				if (Array.isArray(overrideResult)) {
 					for (let e of overrideResult) {
 						let fullEntry = e.hasOwnProperty('qtype') ? e : {qtype: 'AAAA', content: e};
@@ -199,7 +203,9 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc) {
 					}
 				} else {
 					if ((qtype === 'ANY') || (qtype === 'AAAA')) {
-						let result_ip = _result.query_domain(domain_labels);
+						/* dns_overrideFunc could have called setDomain on the Endpoint
+						 * to set a "lookup alias" for the original domain in qname */
+						let result_ip = _result.query_domain(domain_labels.getDomain());
 						if (result_ip) {
 							let ipString = ip.toString(result_ip);
 							result.push({qname: qname, qtype: 'AAAA', ttl: 60, content: ipString});
