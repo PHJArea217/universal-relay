@@ -192,6 +192,11 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc) {
 					return;
 				}
 				let overrideResult = dns_overrideFunc ? dns_overrideFunc(domain_labels.getDomain(), domain_labels) : null;
+				if (domain_labels.ip_) {
+					let ipString = domain_labels.getIPString();
+					let ipType = (ipString.indexOf(':') >= 0) ? 'AAAA' : 'A';
+					overrideResult = [{qtype: ipType, content: ipString}];
+				}
 				if (Array.isArray(overrideResult)) {
 					for (let e of overrideResult) {
 						let fullEntry = e.hasOwnProperty('qtype') ? e : {qtype: 'AAAA', content: e};
@@ -201,7 +206,7 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc) {
 							result.push(fullEntry);
 						}
 					}
-				} else {
+				} else if (domain_labels.domain_) {
 					if ((qtype === 'ANY') || (qtype === 'AAAA')) {
 						/* dns_overrideFunc could have called setDomain on the Endpoint
 						 * to set a "lookup alias" for the original domain in qname */
