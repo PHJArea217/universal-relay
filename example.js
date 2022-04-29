@@ -26,11 +26,11 @@ my_dns_resolver.setServers(['8.8.8.8']);
  * Prefix argument corresponds to fedb:1200:4500:7800::/64
  */
 const ipv6_prefix = 0xfedb120045007800n;
-var ip_domain_map = fake_dns.make_ip_urelay_domain_map(ipv6_prefix, (domain_unused, endpoint_object) => {
+var ip_domain_map = fake_dns.make_urelay_ip_domain_map(ipv6_prefix, (domain_unused, endpoint_object) => {
 	let override_ip = domain_to_ip_static_map.get(endpoint_object.getDomainString());
 	if (override_ip) {
 		if (override_ip[0]) return override_ip[1];
-		endpoint_object.setIPBigInt((ipv6_prefix << 64n) | (0x200000000n) | (override_ip[1] & 0xffffffffn));
+		endpoint_object.setIPBigInt((ipv6_prefix << 64n) | (0x200000000n) | (BigInt(override_ip[1]) & 0xffffffffn));
 		return undefined;
 	}
 	endpoint_object.getSubdomainsOfThen(['arpa', 'home', 'u-relay'], 1, (res, t) => {
@@ -67,7 +67,7 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 						my_endpoint = (new endpoint.Endpoint()).setIPBigInt(0xffff00000000n | minor).setPort(my_cra.req.port);
 						break;
 					case 2n:
-						let lookup_result = ip_to_domain_static_map.get(minor);
+						let lookup_result = ip_to_domain_static_map.get(Number(minor));
 						if (lookup_result) {
 							my_endpoint = (new endpoint.Endpoint()).setDomain(lookup_result).setPort(my_cra.req.port);
 						}
@@ -88,6 +88,7 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 		resultIPs.push(r.toCRAreq());
 	}
 	my_cra.req = resultIPs;
+	return null;
 }
 var my_transparent_server = server_generic.make_server(transparent_server.transparent_server, (e, s) => common_ip_rewrite(e, s, true), dns_he.simple_connect_HE);
 var my_socks_server = server_generic.make_server(socks_server.socks_server, (e, s) => common_ip_rewrite(e, s, false), dns_he.simple_connect_HE);
