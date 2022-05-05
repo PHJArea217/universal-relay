@@ -4,7 +4,7 @@ async function socks_server(conn) {
 	let state = 'i';
 	let charCounter = 0;
 	let charList = null;
-	let info = {};
+	let info = {req: {}};
 	let hostString = "";
 	let hostStringLen = 0;
 	let sendError4 = function() {
@@ -59,8 +59,8 @@ async function socks_server(conn) {
 					}
 					break;
 				case '4i':
-					info.host = +charList[2] + "." + +charList[3] + "." + +charList[4] + "." + +charList[5];
-					info.port = (+charList[0] << 8) + +charList[1];
+					info.req.host = +charList[2] + "." + +charList[3] + "." + +charList[4] + "." + +charList[5];
+					info.req.port = (+charList[0] << 8) + +charList[1];
 					if ((charList[2] === 0) && (charList[3] === 0) && (charList[4] === 0) && (charList[5] > 0)) {
 						state = '4ud';
 					} else {
@@ -76,9 +76,9 @@ async function socks_server(conn) {
 					if (c === 0) {
 						state = '4uc';
 						phase = 1;
-						info.host = hostString;
-						info.version = 4;
-						info.type = 'domain';
+						info.req.host = hostString;
+						info.__socks_version = 4;
+						info.req.type = 'domain';
 						/* Colon character allowed due to IPv6 literals, but there
 						 * could be circumstances where it could be confused with
 						 * a port number. Maybe it's up to the filter to do that;
@@ -97,8 +97,8 @@ async function socks_server(conn) {
 					if (c === 0) {
 						state = '4uc';
 						phase = 1;
-						info.version = 4;
-						info.type = 'ipv4';
+						info.__socks_version = 4;
+						info.req.type = 'ipv4';
 					}
 					break;
 				case '5':
@@ -166,8 +166,8 @@ async function socks_server(conn) {
 					break;
 				case '5r4':
 				case '5r6':
-					info.host = ip.toString(new Buffer(charList));
-					info.type = charList.length > 4 ? 'ipv6' : 'ipv4';
+					info.req.host = ip.toString(new Buffer(charList));
+					info.req.type = charList.length > 4 ? 'ipv6' : 'ipv4';
 					state = '5rp';
 					charList = [];
 					charCounter = 2;
@@ -182,8 +182,8 @@ async function socks_server(conn) {
 							throw new Error();
 						}
 					}
-					info.type = 'domain';
-					info.host = domainString;
+					info.req.type = 'domain';
+					info.req.host = domainString;
 					state = '5rp';
 					charList = [];
 					charCounter = 2;
@@ -191,8 +191,8 @@ async function socks_server(conn) {
 				case '5rp':
 					state = '5c';
 					phase = 1;
-					info.port = (charList[0] << 8) + charList[1];
-					info.version = 5;
+					info.req.port = (charList[0] << 8) + charList[1];
+					info.__socks_version = 5;
 					break;
 				default:
 					conn.destroy();
@@ -209,7 +209,7 @@ async function socks_server(conn) {
 				info.sendOnAccept = new Buffer([5, 0, 0, 1, 0, 0, 0, 0, 0, 0]);
 				info.sendOnReject = new Buffer([5, 1, 0, 1, 0, 0, 0, 0, 0, 0]);
 			}
-			info.req = {host: info.host, port: info.port, type: info.type};
+			// info.req = {host: info.host, port: info.port, type: info.type};
 			return info;
 		}
 	}
@@ -251,18 +251,26 @@ function make_socks_client(options) {
 							socksClient.write(new Buffer([5, 1, 0]));
 							switch (dest.req.type) {
 								case 'ipv4':
-									socksClient.write(new Buffer([1]));
-									socksClient.write(ip.toBuffer(dest.req.host));
+								case 'ipv6':
+									let ipBuffer = ip.toBuffer(dest.req.host);
+									switch (ipBuffer.length) {
+										case 4:
+											socksClient.write(new Buffer([1]));
+											break;
+										case 16:
+											socksClient.write(new Buffer([4]));
+											break;
+										default:
+											throw new Error();
+											break;
+									}
+									socksClient.write(ipBuffer);
 									break;
 								case 'domain':
 									let sl = dest.req.host.length;
 									if (sl > 255) throw new Error();
 									socksClient.write(new Buffer([3, sl]));
 									socksClient.write(dest.req.host);
-									break;
-								case 'ipv6':
-									socksClient.write(new Buffer([4]));
-									socksClient.write(ip.toBuffer(dest.req.host));
 									break;
 								default:
 									throw new Error();
