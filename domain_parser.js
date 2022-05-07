@@ -9,7 +9,7 @@ function extractSubdomains(domain, suffix) {
 	}
 	return domain.slice(suffix.length);
 }
-function urelay_handle_special_domain_part(special_part) {
+function urelay_handle_special_domain_part(special_part, allow_linklocal) {
 	if (special_part.startsWith('ip4-')) {
 		let result = '';
 		for (let i = 4; i < special_part.length; i++) {
@@ -28,6 +28,7 @@ function urelay_handle_special_domain_part(special_part) {
 		return [];
 	} else if (special_part.startsWith('ip6-')) {
 		let result = '';
+		let linklocal_part = '';
 		for (let i = 4; i < special_part.length; i++) {
 			let cc = special_part.charCodeAt(i);
 			if ((cc >= 0x30) && (cc <= 0x39)) {
@@ -36,12 +37,15 @@ function urelay_handle_special_domain_part(special_part) {
 				result += special_part.charAt(i);
 			} else if (cc === 0x2d) /* '-' */ {
 				result += ':';
-			} else { /* TODO: 's' -> % for link local */
+			} else if (allow_linklocal && (cc === 0x73)) /* 's' */ {
+				linklocal_part = '%' + special_part.substring(i + 1);
+				break;
+			} else {
 				return [];
 			}
 		}
 		if (net.isIPv6(result)) {
-			return [result];
+			return [result + linklocal_part];
 		}
 		return [];
 	}
@@ -52,7 +56,7 @@ function urelay_handle_special_domain(domain_parts, domainName_unused) {
 	if (subdomain_parts === null) return null;
 	if (subdomain_parts.length === 0 /* [] */) return [];
 	let special_part = String(subdomain_parts[0]);
-	return urelay_handle_special_domain_part(special_part) || [];
+	return urelay_handle_special_domain_part(special_part, false) || [];
 }
 function urelay_dns_override(domain_parts) {
 	if (extractSubdomains(domain_parts, ['local'])) return []; /* *.local (mDNS) */
