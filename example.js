@@ -85,7 +85,7 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 	for (let r of resolvedIPEndpoints) {
 		/* NAT64 CLAT with well-known prefix 64:ff9b::/96 */
 		// r.getHostNRThen(0xffff00000000n, 96, (res, t) => t.setIPBigInt(res | (0x64ff9bn << 96n)));
-		resultIPs.push(r.toCRAreq());
+		if (!r.domain_) resultIPs.push(r.toCRAreq());
 	}
 	my_cra.req = resultIPs;
 	return null;

@@ -9,12 +9,7 @@ function extractSubdomains(domain, suffix) {
 	}
 	return domain.slice(suffix.length);
 }
-
-function urelay_handle_special_domain(domain_parts, domainName_unused) {
-	let subdomain_parts = extractSubdomains(domain_parts, ['arpa', 'home', 'u-relay']); /* u-relay.home.arpa */
-	if (subdomain_parts === null) return null;
-	if (subdomain_parts.length === 0 /* [] */) return [];
-	let special_part = String(subdomain_parts[0]);
+function urelay_handle_special_domain_part(special_part) {
 	if (special_part.startsWith('ip4-')) {
 		let result = '';
 		for (let i = 4; i < special_part.length; i++) {
@@ -28,8 +23,9 @@ function urelay_handle_special_domain(domain_parts, domainName_unused) {
 			}
 		}
 		if (net.isIPv4(result)) {
-			return [result];
+			return [result]; /* FIXME: canonicalization? */
 		}
+		return [];
 	} else if (special_part.startsWith('ip6-')) {
 		let result = '';
 		for (let i = 4; i < special_part.length; i++) {
@@ -47,8 +43,16 @@ function urelay_handle_special_domain(domain_parts, domainName_unused) {
 		if (net.isIPv6(result)) {
 			return [result];
 		}
+		return [];
 	}
-	return [];
+	return null;
+}
+function urelay_handle_special_domain(domain_parts, domainName_unused) {
+	let subdomain_parts = extractSubdomains(domain_parts, ['arpa', 'home', 'u-relay']); /* u-relay.home.arpa */
+	if (subdomain_parts === null) return null;
+	if (subdomain_parts.length === 0 /* [] */) return [];
+	let special_part = String(subdomain_parts[0]);
+	return urelay_handle_special_domain_part(special_part) || [];
 }
 function urelay_dns_override(domain_parts) {
 	if (extractSubdomains(domain_parts, ['local'])) return []; /* *.local (mDNS) */
@@ -61,4 +65,5 @@ function urelay_dns_override(domain_parts) {
 }
 exports.extractSubdomains = extractSubdomains;
 exports.urelay_handle_special_domain = urelay_handle_special_domain;
+exports.urelay_handle_special_domain_part = urelay_handle_special_domain_part;
 exports.urelay_dns_override = urelay_dns_override;
