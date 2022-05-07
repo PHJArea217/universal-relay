@@ -82,7 +82,7 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 	/* Resolve the domain name in the my_endpoint object, if it is a "domain" type */
 	my_endpoint.getSubdomainsOfThen(['arpa', 'home', 'u-relay'], 1, (res, t) => {
 		let res_str = String(res[0] || '');
-		let res_ip = hosts_map.get(res_str) || domain_parser.urelay_handle_special_domain_part(res_str, true);
+		let res_ip = hosts_map.get(res_str) || domain_parser.urelay_handle_special_domain_part(res_str, true) || [];
 		if (res_ip) {
 			if (!Array.isArray(res_ip)) res_ip = [res_ip];
 			if (res_ip[0]) {
