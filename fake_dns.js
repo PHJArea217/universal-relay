@@ -229,7 +229,7 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 //			}
 			res.send(200, {result: result});
 		});
-		app.use('/__pdns__/getAllDomainMetadata', function (req, res) {
+		app.use('/__pdns__/getalldomainmetadata', function (req, res) {
 			let req_path_parts = String(req.path).split('/');
 			if ((req_path_parts.length !== 2) || (req_path_parts[0] !== '')) {
 				res.send(400);
