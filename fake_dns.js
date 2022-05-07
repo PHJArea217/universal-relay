@@ -152,9 +152,10 @@ function make_urelay_ip_gen() {
 		return state.counter;
 	};
 }
-function make_urelay_ip_domain_map(prefix, dns_overrideFunc) {
+function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 	let _result = {};
-	_result.map_state = make_fake_DNS_state(make_urelay_ip_gen());
+	_result.options = options_arg || {};
+	_result.map_state = make_fake_DNS_state(_result.options.ip_generator || make_urelay_ip_gen());
 	_result.prefix = prefix;
 	_result.query_domain = function (domain_parts) {
 		if (!Array.isArray(domain_parts)) return null;
@@ -166,7 +167,9 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc) {
 		}
 		return null;
 	};
-	_result.make_pdns_express_app = function(app) {
+	_result.make_pdns_express_app = function(app, dof_arg_1, static_only) {
+		let dof_arg = dof_arg_1;
+		let staticOnly = static_only;
 		app.use('/__pdns__/lookup', function (req, res) {
 			let req_path_parts = String(req.path).split('/');
 			if ((req_path_parts.length !== 3) || (req_path_parts[0] !== '')) {
@@ -176,7 +179,7 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc) {
 			let result = [];
 			let qname = decodeURIComponent(req_path_parts[1]).toLowerCase();
 			let qtype = req_path_parts[2].toUpperCase();
-			if (qname === '.') {
+			if ((qname === '.') && !_result.options.rootIsNotSpecial) {
 				if ((qtype === 'SOA') || (qtype === 'ANY')) {
 					result.push({qname: '.', qtype: 'SOA', ttl: 120, content: 'dns-root.u-relay.home.arpa. u-relay.peterjin.org. 1 1000 1000 1000 120'});
 				}
@@ -191,7 +194,7 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc) {
 					res.send(400);
 					return;
 				}
-				let overrideResult = dns_overrideFunc ? dns_overrideFunc(domain_labels.getDomain(), domain_labels) : null;
+				let overrideResult = dns_overrideFunc ? dns_overrideFunc(domain_labels.getDomain(), domain_labels, [dof_arg, req, res, 1]) : null;
 				if (domain_labels.ip_) {
 					let ipString = domain_labels.getIPString();
 					let ipType = (ipString.indexOf(':') >= 0) ? 'AAAA' : 'A';
@@ -206,7 +209,7 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc) {
 							result.push(fullEntry);
 						}
 					}
-				} else if (domain_labels.domain_) {
+				} else if (domain_labels.domain_ && !staticOnly) {
 					if ((qtype === 'ANY') || (qtype === 'AAAA')) {
 						/* dns_overrideFunc could have called setDomain on the Endpoint
 						 * to set a "lookup alias" for the original domain in qname */
@@ -227,10 +230,25 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc) {
 			res.send(200, {result: result});
 		});
 		app.use('/__pdns__/getAllDomainMetadata', function (req, res) {
-			if (req.path === '/%2e') {
+			let req_path_parts = String(req.path).split('/');
+			if ((req_path_parts.length !== 2) || (req_path_parts[0] !== '')) {
+				res.send(400);
+				return;
+			}
+			let result = [];
+			let qname = decodeURIComponent(req_path_parts[1]).toLowerCase();
+			if ((qname === '.') && !_result.options.rootIsNotSpecial) {
 				res.send(200, {result: {"PRESIGNED": ["0"]}});
 			} else {
-				res.send(200, {result: {}});
+				let domain_labels = new endpoint.Endpoint();
+				try {
+					domain_labels.setDomain2(qname, false);
+				} catch (e) {
+					res.send(400);
+					return;
+				}
+				let overrideResult = (dns_overrideFunc && _result.options.haveDomainMetadata) ? dns_overrideFunc(domain_labels.getDomain(), domain_labels, [dof_arg, req, res, 2]) : null;
+				res.send(200, {result: overrideResult});
 			}
 		});
 		app.use('/dump_data', function (req, res) {
