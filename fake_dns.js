@@ -247,7 +247,7 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 					res.send(400);
 					return;
 				}
-				let overrideResult = (dns_overrideFunc && _result.options.haveDomainMetadata) ? dns_overrideFunc(domain_labels.getDomain(), domain_labels, [dof_arg, req, res, 2]) : null;
+				let overrideResult = (dns_overrideFunc && _result.options.haveDomainMetadata) ? dns_overrideFunc(domain_labels.getDomain(), domain_labels, [dof_arg, req, res, 2]) : {};
 				res.send(200, {result: overrideResult});
 			}
 		});
