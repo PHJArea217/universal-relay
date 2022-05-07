@@ -34,7 +34,7 @@ function urelay_handle_special_domain_part(special_part, allow_linklocal) {
 			if ((cc >= 0x30) && (cc <= 0x39)) {
 				result += '' + (cc - 0x30);
 			} else if ((cc >= 0x61) && (cc <= 0x66)) {
-				result += special_part.charAt(i);
+				result += 'abcdef'.charAt(cc - 0x61);
 			} else if (cc === 0x2d) /* '-' */ {
 				result += ':';
 			} else if (allow_linklocal && (cc === 0x73)) /* 's' */ {
