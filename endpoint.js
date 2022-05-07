@@ -153,8 +153,9 @@ function Endpoint() {
 		}
 		return this.domain_.slice(domain_length, domain_length + nr_parts_to_keep);
 	};
-	this.resolveDynamic = async function (resolver) {
+	this.resolveDynamic = async function (resolver, options_) {
 		let cloned_this = this.clone();
+		let options = options_ || {};
 		if (!this.domain_) {
 			return [cloned_this];
 		}
@@ -173,7 +174,7 @@ function Endpoint() {
 			if (r instanceof Endpoint) {
 				result_array.push(r);
 			} else {
-				result_array.push(cloned_this.clone().setDomain(String(r)));
+				result_array.push(cloned_this.clone()[options.ipOnly ? "setIPStringWithScope" : "setDomain"](String(r)));
 			}
 		}
 		return result_array;
