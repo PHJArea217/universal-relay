@@ -174,16 +174,16 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc) {
 				return;
 			}
 			let result = [];
-			if (req_path_parts[1] === '%2e') {
-				if ((req_path_parts[2] === 'SOA') || (req_path_parts[2] === 'ANY')) {
+			let qname = decodeURIComponent(req_path_parts[1]).toLowerCase();
+			let qtype = req_path_parts[2].toUpperCase();
+			if (qname === '.') {
+				if ((qtype === 'SOA') || (qtype === 'ANY')) {
 					result.push({qname: '.', qtype: 'SOA', ttl: 120, content: 'dns-root.u-relay.home.arpa. u-relay.peterjin.org. 1 1000 1000 1000 120'});
 				}
-				if ((req_path_parts[2] === 'NS') || (req_path_parts[2] === 'ANY')) {
+				if ((qtype === 'NS') || (qtype === 'ANY')) {
 					result.push({qname: '.', qtype: 'NS', ttl: 120, content: 'dns-root.u-relay.home.arpa.'});
 				}
 			} else {
-				let qname = decodeURIComponent(req_path_parts[1]).toLowerCase();
-				let qtype = req_path_parts[2].toUpperCase();
 				let domain_labels = new endpoint.Endpoint();
 				try {
 					domain_labels.setDomain2(qname, false);
