@@ -95,6 +95,7 @@ function Endpoint() {
 				throw new Error('Domain label contains invalid characters');
 			}
 		}
+		Object.freeze(r);
 		this.domain_ = r;
 		this.ip_ = 0n;
 		return this;
@@ -253,4 +254,10 @@ function Endpoint() {
 exports.Endpoint = Endpoint;
 exports.fromCRAreq = function (req) {
 	return (new Endpoint()).setDomain(req.host).setPort(req.port);
+}
+exports.ofLocal = function (s) {
+	return (new Endpoint()).setIPStringWithScope(s.localAddress).setPort(s.localPort);
+}
+exports.ofRemote = function (s) {
+	return (new Endpoint()).setIPStringWithScope(s.remoteAddress).setPort(s.remotePort);
 }
