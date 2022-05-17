@@ -1,3 +1,4 @@
+'use strict';
 const ip = require('ip');
 const fs = require('fs');
 const endpoint = require('./endpoint.js');

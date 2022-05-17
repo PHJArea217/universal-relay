@@ -1,3 +1,4 @@
+'use strict';
 /*
  * connReadPromise: attempt to perform I/O on the socket to extract the client's requested destination, should produce the exact numbers.
  *                  Return an opaque object.

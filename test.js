@@ -1,3 +1,4 @@
+'use strict';
 const net = require('net');
 const socks_server = require('./socks_server.js');
 const server_generic = require('./server_generic.js');

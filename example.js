@@ -1,3 +1,4 @@
+'use strict';
 const net = require('net');
 const endpoint = require('./endpoint.js');
 const server_generic = require('./server_generic.js');

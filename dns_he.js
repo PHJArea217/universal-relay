@@ -1,3 +1,4 @@
+'use strict';
 const net = require('net');
 const fake_dns = require('./fake_dns.js');
 function resolve_dns_dualstack(_domainName, dnsResolver, mode, overrideFunc) {

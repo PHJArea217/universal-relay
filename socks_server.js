@@ -1,3 +1,4 @@
+'use strict';
 const promises_lib = require('./common_promises.js');
 const ip = require('ip');
 async function socks_server(conn) {

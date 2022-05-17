@@ -1,3 +1,4 @@
+'use strict';
 const promises_lib = require("./common_promises.js");
 async function transparent_server(conn) {
 	let host = String(conn.localAddress);

@@ -1,3 +1,4 @@
+'use strict';
 // const fake_dns = require('./fake_dns.js');
 const net = require('net');
 function extractSubdomains(domain, suffix) {

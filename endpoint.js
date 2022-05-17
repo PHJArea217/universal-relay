@@ -1,3 +1,4 @@
+'use strict';
 const ip = require('ip');
 const net = require('net');
 function Endpoint() {

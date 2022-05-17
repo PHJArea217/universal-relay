@@ -1,3 +1,4 @@
+'use strict';
 const ip = require('ip');
 const simpleIPRewrite = require('./filters/simpleIPRewrite.js');
 const rewriteMap = new Map();
