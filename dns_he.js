@@ -30,26 +30,26 @@ function resolve_dns_dualstack(_domainName, dnsResolver, mode, overrideFunc) {
 			let result = [];
 			switch (mode) {
 				case "4_strong": /* strongly prefer ipv4 */
-					for (let i of u_ipv4) {result.push(i); if (result.length > 25) break;}
-					for (let i of u_ipv6) {result.push(i); if (result.length > 25) break;}
+					for (let i of u_ipv4) {result.push(i); if (result.length > 3) break;}
+					for (let i of u_ipv6) {result.push(i); if (result.length > 3) break;}
 					break;
 				case "6_strong": /* strongly prefer ipv6 */
-					for (let i of u_ipv6) {result.push(i); if (result.length > 25) break;}
-					for (let i of u_ipv4) {result.push(i); if (result.length > 25) break;}
+					for (let i of u_ipv6) {result.push(i); if (result.length > 3) break;}
+					for (let i of u_ipv4) {result.push(i); if (result.length > 3) break;}
 					break;
 				case "4_weak":
 					while ((u_ipv4.length > 0) || (u_ipv6.length > 0)) {
 						if (u_ipv4.length > 0) result.push(u_ipv4.shift());
 						if (u_ipv6.length > 0) result.push(u_ipv6.shift());
 						/* Technically this is an off by one error but the limit is not a "hard" limit */
-						if (result.length > 25) break;
+						if (result.length > 5) break;
 					}
 					break;
 				case "6_weak":
 					while ((u_ipv4.length > 0) || (u_ipv6.length > 0)) {
 						if (u_ipv6.length > 0) result.push(u_ipv6.shift());
 						if (u_ipv4.length > 0) result.push(u_ipv4.shift());
-						if (result.length > 25) break;
+						if (result.length > 5) break;
 					}
 					break;
 			}
