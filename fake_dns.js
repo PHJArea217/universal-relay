@@ -187,7 +187,7 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 				if ((qtype === 'NS') || (qtype === 'ANY')) {
 					result.push({qname: '.', qtype: 'NS', ttl: 120, content: 'dns-root.u-relay.home.arpa.'});
 				}
-			} else {
+			} else if (!qname.startsWith("*")) {
 				let domain_labels = new endpoint.Endpoint();
 				try {
 					domain_labels.setDomain2(qname, false);
@@ -224,13 +224,19 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 						}
 					}
 				}
+				if (result.length === 0) {
+					/* Without this dummy record, PowerDNS would return NXDOMAIN for blocked domains. Not what we want. */
+					if ((qtype === 'ANY') || (qtype === 'HINFO')) {
+						result = [{qname: qname, qtype: 'HINFO', ttl: 60, content: '"RFC8482" ""'}];
+					}
+				}
 			}
 //			if (result.length === 0) {
 //				result = [{qname: req_path_parts[1], qtype: "0", ttl: 0, content: ""}];
 //			}
 			res.send(200, {result: result});
 		});
-		app.use('/__pdns__/getalldomainmetadata', function (req, res) {
+		let common_function = function (req, res, num) {
 			let req_path_parts = String(req.path).split('/');
 			if ((req_path_parts.length !== 2) || (req_path_parts[0] !== '')) {
 				res.send(400);
@@ -248,10 +254,15 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 					res.send(400);
 					return;
 				}
-				let overrideResult = (dns_overrideFunc && _result.options.haveDomainMetadata) ? dns_overrideFunc(domain_labels.getDomain(), domain_labels, [dof_arg, req, res, 2]) : {};
+				let overrideResult = (dns_overrideFunc && _result.options.haveDomainMetadata) ? dns_overrideFunc(domain_labels.getDomain(), domain_labels, [dof_arg, req, res, num]) : {};
 				res.send(200, {result: overrideResult});
 			}
-		});
+		};
+		app.use('/__pdns__/getalldomainmetadata', (req, res) => common_function(req, res, 2));
+		app.use('/__pdns__/getAllDomainMetadata', (req, res) => common_function(req, res, 2));
+		let get_all_domains_func = (req, res) => res.send(200, {result: _result.options.domainList || [{id: 1, zone: ".", kind: "native"}]});
+		app.use('/__pdns__/getAllDomains', get_all_domains_func);
+		app.use('/__pdns__/getalldomains', get_all_domains_func);
 		app.use('/dump_data', function (req, res) {
 			let result = [];
 			for (let entry of _result.map_state.byIP) {
