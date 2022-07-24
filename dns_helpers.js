@@ -136,7 +136,67 @@ function make_soa_ns_handler(default_soa, default_ns, options) {
 	};
 	return result;
 }
+function make_acme_challenge_handler(options) {
+	let result = {options: options || {}, domain_map: new Map()};
+	result.addKey = function (key) {
+		result.domain_map.set(key, []);
+	};
+	result.getAcmeChallengeTXTFunc = function (keys) {
+		return function () {
+			let resultTXTRecords = [];
+			for (let k of keys) {
+				let v = result.domain_map.get(k);
+				if (v) {
+					for (let r of v) {
+						resultTXTRecords.push({qtype: "TXT", content: '"' + r + '"'});
+					}
+				}
+			}
+			return resultTXTRecords;
+		};
+	};
+	result.make_express_app = function (app) {
+		app.post('/add', function (req, res) {
+			let k = String(req.query.k);
+			let c = String(req.query.c);
+			if (c.match(/^[0-9A-Za-z_-]{20,60}$/) || (c === 'clear')) {
+				let v = result.domain_map.get(k);
+				if (v) {
+					if (c === 'clear') {
+						while (v.length > 0)
+							v.pop();
+					} else if (v.length < 2) {
+						console.log(c + ' -> ' + k);
+						v.push(c);
+					} else {
+						res.send(400, 'too many TXT records for key');
+						return;
+					}
+					res.send(200, 'success');
+				} else {
+					res.send(400, 'invalid key');
+				}
+			} else {
+				res.send(400, 'invalid challenge string');
+			}
+		});
+		app.get('/list', function (req, res) {
+			let result2 = [];
+			for (let k of result.domain_map.entries()) {
+				result2.push(k);
+			}
+			res.send(200, result2);
+		});
+		app.get('/', function (req, res) {
+			res.header('content-type', 'text/html');
+			res.send(200, '<form action="/add" method="post"><input id="k"></input><input id="c"></input><input type="submit"></input></form>');
+		});
+	};
+	return result;
+}
 exports.handle_inaddr_arpa = handle_inaddr_arpa;
 exports.handle_ip6_arpa = handle_ip6_arpa;
 exports.make_bidir_map = make_bidir_map;
 exports.make_lookup_mapping = make_lookup_mapping;
+exports.make_soa_ns_handler = make_soa_ns_handler;
+exports.make_acme_challenge_handler = make_acme_challenge_handler;
