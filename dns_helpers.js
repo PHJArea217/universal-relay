@@ -194,6 +194,36 @@ function make_acme_challenge_handler(options) {
 	};
 	return result;
 }
+function make_output_transform_ip(numbers_only, ranges) {
+	return function (input) {
+		let result = [];
+		let relative_ip = input[0];
+		let user_obj = input[1];
+		for (let r of ranges){
+			let offset = r.offset || 0n;
+			let base = r.base;
+			let limit = r.limit;
+			if (relative_ip >= offset) {
+				let offset_ip = relative_ip - offset;
+				if (offset_ip < limit){
+					if (numbers_only) {
+						result.push(offset_ip + base);
+					} else {
+						let ep = new endpoint.Endpoint();
+						ep.setIPBigInt(offset_ip + base);
+						let ip_string = ep.getIPString();
+						if (ip_string.indexOf(':') >= 0) {
+							result.push({qtype: 'AAAA', content: ip_string});
+						} else {
+							result.push({qtype: 'A', content: ip_string});
+						}
+					}
+				}
+			}
+		}
+		return [result, user_obj];
+	};
+}
 exports.handle_inaddr_arpa = handle_inaddr_arpa;
 exports.handle_ip6_arpa = handle_ip6_arpa;
 exports.make_bidir_map = make_bidir_map;
