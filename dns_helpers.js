@@ -153,13 +153,13 @@ function make_acme_challenge_handler(options) {
 					}
 				}
 			}
-			return resultTXTRecords;
+			return [resultTXTRecords, null];
 		};
 	};
 	result.make_express_app = function (app) {
 		app.post('/add', function (req, res) {
-			let k = String(req.query.k);
-			let c = String(req.query.c);
+			let k = String(req.body.k);
+			let c = String(req.body.c);
 			if (c.match(/^[0-9A-Za-z_-]{20,60}$/) || (c === 'clear')) {
 				let v = result.domain_map.get(k);
 				if (v) {

@@ -17,9 +17,9 @@ var example_com_records_map = new Map();
 acme_manager.addKey('example.com');
 acme_manager.addKey('*.example.com');
 example_com_records_map.set('_acme-challenge', acme_manager.getAcmeChallengeTXTFunc(['example.com', '*.example.com']));
-example_com_records_map.set('_domainkey|selector', [{qtype: "TXT", content: "v=DKIM1; k=rsa; p="}]);
-example_com_records_map.set('_dmarc', [{qtype: "TXT", content: "v=DMARC1; p=reject;"}]);
-example_com_records_map.set('', [null, {qtype: 'A', content: '192.0.2.1'}, {qtype: 'AAAA', content: '2001:db8::1'}, {qtype: "MX", content: "0 mail.example.com."}, {qtype: "TXT", content: "v=spf1 ip4:192.0.2.0/24 -all"}]);
+example_com_records_map.set('_domainkey|selector', [[{qtype: "TXT", content: "v=DKIM1; k=rsa; p="}], null]);
+example_com_records_map.set('_dmarc', [[{qtype: "TXT", content: "v=DMARC1; p=reject;"}], null]);
+example_com_records_map.set('', [[null, {qtype: 'A', content: '192.0.2.1'}, {qtype: 'AAAA', content: '2001:db8::1'}, {qtype: "MX", content: "0 mail.example.com."}, {qtype: "TXT", content: "v=spf1 ip4:192.0.2.0/24 -all"}], null]);
 var mapping = dns_helpers.make_lookup_mapping(example_com_records_map, null);
 var m = fake_dns.make_urelay_ip_domain_map(0x100000000000000n, function(domain_parts, ep, extra_args) {
 	if (extra_args[3] === 2) {
