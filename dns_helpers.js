@@ -1,3 +1,4 @@
+const endpoint = require('./endpoint.js');
 function handle_inaddr_arpa(lower_parts) {
 	if (lower_parts.length !== 4) {
 		return -1n;
@@ -100,7 +101,7 @@ function make_lookup_mapping(staticMap, options) {
 			}
 		}
 		if (result.bidir_map) {
-			let overrideResult = result.bidir_map[result.options.reverse ? 'translate_reverse' \
+			let overrideResult = result.bidir_map[result.options.reverse ? 'translate_reverse'
 				: 'translate_forward']((result.options.bidir_input_transform || identityMap)(key));
 			if (overrideResult) {
 				let overrideResult2 = (result.options.bidir_output_transform || identityMap)(overrideResult);
@@ -128,7 +129,7 @@ function make_soa_ns_handler(default_soa, default_ns, options) {
 	let result = {options: options || {}, domainList: [], default_soa: default_soa, default_ns: default_ns, map: new Map(), counter: 0};
 	result.addDomain = function (domain, soa, ns) {
 		result.map.set(domain, generate_rrset(soa || result.default_soa, ns || result.default_ns));
-		result.domainList.push({id: ++counter, zone: (domain.endsWith('.') ? domain : (domain + '.')), kind: "native"});
+		result.domainList.push({id: ++result.counter, zone: (domain.endsWith('.') ? domain : (domain + '.')), kind: "native"});
 	};
 	result.getSOANS = function (ep) {
 		let r = result.map.get(ep.getDomainString());
