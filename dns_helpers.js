@@ -117,6 +117,25 @@ function make_lookup_mapping(staticMap, options) {
 	};
 	return result;
 }
+function make_soa_ns_handler(default_soa, default_ns, options) {
+	function generate_rrset(soa, ns) {
+		let result_rrset = [{qtype: 'SOA', content: soa}];
+		for (let n of ns) {
+			result_rrset.push({qtype: 'NS', content: n});
+		}
+		return result_rrset;
+	}
+	let result = {options: options || {}, domainList: [], default_soa: default_soa, default_ns: default_ns, map: new Map(), counter: 0};
+	result.addDomain = function (domain, soa, ns) {
+		result.map.set(domain, generate_rrset(soa || result.default_soa, ns || result.default_ns));
+		result.domainList.push({id: ++counter, zone: (domain.endsWith('.') ? domain : (domain + '.')), kind: "native"});
+	};
+	result.getSOANS = function (ep) {
+		let r = result.map.get(ep.getDomainString());
+		return r || [];
+	};
+	return result;
+}
 exports.handle_inaddr_arpa = handle_inaddr_arpa;
 exports.handle_ip6_arpa = handle_ip6_arpa;
 exports.make_bidir_map = make_bidir_map;
