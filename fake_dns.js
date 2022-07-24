@@ -214,10 +214,13 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 							do_dummy_hinfo = false;
 							continue;
 						}
-						let fullEntry = e.hasOwnProperty('qtype') ? e : {qtype: 'AAAA', content: e};
+						let fullEntry = e.hasOwnProperty('qtype') ? {
+							qname: e.hasOwnProperty('qname') ? e.qname : qname,
+							qtype: e.qtype,
+							ttl: e.hasOwnProperty('ttl') ? e.ttl : 60,
+							content: e.content} : {qname: qname, qtype: 'AAAA',
+								ttl: 60, content: e};
 						if ((qtype === 'ANY') || (qtype === fullEntry.qtype)) {
-							if (!fullEntry.hasOwnProperty('ttl')) fullEntry.ttl = 60;
-							if (!fullEntry.hasOwnProperty('qname')) fullEntry.qname = qname;
 							result.push(fullEntry);
 						}
 					}
