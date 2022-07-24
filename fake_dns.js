@@ -171,7 +171,7 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 	_result.make_pdns_express_app = function(app, dof_arg_1, static_only) {
 		let dof_arg = dof_arg_1;
 		let staticOnly = static_only;
-		app.use('/__pdns__/lookup', function (req, res) {
+		app.use('/__pdns__/lookup', async function (req, res) {
 			let req_path_parts = String(req.path).split('/');
 			if ((req_path_parts.length !== 3) || (req_path_parts[0] !== '')) {
 				res.send(400);
@@ -187,22 +187,33 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 				if ((qtype === 'NS') || (qtype === 'ANY')) {
 					result.push({qname: '.', qtype: 'NS', ttl: 120, content: 'dns-root.u-relay.home.arpa.'});
 				}
-			} else if (!qname.startsWith("*")) {
+			} else {
 				let domain_labels = new endpoint.Endpoint();
+				let do_aaaa = true;
+				let do_dummy_hinfo = true;
 				try {
 					domain_labels.setDomain2(qname, false);
 				} catch (e) {
-					res.send(400);
+					res.send(200, {result: []});
 					return;
 				}
-				let overrideResult = dns_overrideFunc ? dns_overrideFunc(domain_labels.getDomain(), domain_labels, [dof_arg, req, res, 1]) : null;
+				let overrideResult = dns_overrideFunc ? (await dns_overrideFunc(domain_labels.getDomain(), domain_labels, [dof_arg, req, res, 1])) : null;
 				if (domain_labels.ip_) {
 					let ipString = domain_labels.getIPString();
 					let ipType = (ipString.indexOf(':') >= 0) ? 'AAAA' : 'A';
 					overrideResult = [{qtype: ipType, content: ipString}];
 				}
 				if (Array.isArray(overrideResult)) {
+					do_aaaa = false;
 					for (let e of overrideResult) {
+						if (e === null) {
+							do_aaaa = true;
+							continue;
+						}
+						if (e === 0) {
+							do_dummy_hinfo = false;
+							continue;
+						}
 						let fullEntry = e.hasOwnProperty('qtype') ? e : {qtype: 'AAAA', content: e};
 						if ((qtype === 'ANY') || (qtype === fullEntry.qtype)) {
 							if (!fullEntry.hasOwnProperty('ttl')) fullEntry.ttl = 60;
@@ -210,7 +221,8 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 							result.push(fullEntry);
 						}
 					}
-				} else if (domain_labels.domain_ && !staticOnly) {
+				}
+				if (do_aaaa && domain_labels.domain_ && !staticOnly) {
 					if ((qtype === 'ANY') || (qtype === 'AAAA')) {
 						/* dns_overrideFunc could have called setDomain on the Endpoint
 						 * to set a "lookup alias" for the original domain in qname */
@@ -224,7 +236,7 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 						}
 					}
 				}
-				if (result.length === 0) {
+				if (do_dummy_hinfo && (result.length === 0)) {
 					/* Without this dummy record, PowerDNS would return NXDOMAIN for blocked domains. Not what we want. */
 					if ((qtype === 'ANY') || (qtype === 'HINFO')) {
 						result = [{qname: qname, qtype: 'HINFO', ttl: 60, content: '"RFC8482" ""'}];
@@ -236,7 +248,7 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 //			}
 			res.send(200, {result: result});
 		});
-		let common_function = function (req, res, num) {
+		let common_function = async function (req, res, num) {
 			let req_path_parts = String(req.path).split('/');
 			if ((req_path_parts.length !== 2) || (req_path_parts[0] !== '')) {
 				res.send(400);
@@ -251,10 +263,10 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 				try {
 					domain_labels.setDomain2(qname, false);
 				} catch (e) {
-					res.send(400);
+					res.send(200, {result: {}});
 					return;
 				}
-				let overrideResult = (dns_overrideFunc && _result.options.haveDomainMetadata) ? dns_overrideFunc(domain_labels.getDomain(), domain_labels, [dof_arg, req, res, num]) : {};
+				let overrideResult = (dns_overrideFunc && _result.options.haveDomainMetadata) ? (await dns_overrideFunc(domain_labels.getDomain(), domain_labels, [dof_arg, req, res, num])) : {};
 				res.send(200, {result: overrideResult});
 			}
 		};
