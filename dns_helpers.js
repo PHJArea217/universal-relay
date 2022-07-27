@@ -190,7 +190,7 @@ function make_acme_challenge_handler(options) {
 		});
 		app.get('/', function (req, res) {
 			res.header('content-type', 'text/html');
-			res.send(200, '<form action="/add" method="post"><input id="k"></input><input id="c"></input><input type="submit"></input></form>');
+			res.send(200, '<form action="/add" method="post"><input name="k"></input><input name="c"></input><input type="submit"></input></form>');
 		});
 	};
 	return result;
