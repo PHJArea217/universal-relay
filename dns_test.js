@@ -34,6 +34,20 @@ var m = fake_dns.make_urelay_ip_domain_map(0x100000000000000n, function(domain_p
 			result.push(...r.rrset);
 		}
 	});
+	ep.getSubdomainsOfThen(['arpa'], Infinity, function (res, t) {
+		let ip_result = -1n;
+		switch (res[0]) {
+			case 'in-addr':
+				ip_result = dns_helpers.handle_inaddr_arpa(res.slice(1));
+				break;
+			case 'ip6':
+				ip_result = dns_helpers.handle_ip6_arpa(res.slice(1));
+				break;
+		}
+		if (ip_result >= 0n) {
+			let rdns_ep = (new endpoint.Endpoint()).setIPBigInt(ip_result);
+		}
+	});
 	return result;
 }, {domainList: domain_manager.domainList});
 m.make_pdns_express_app(pdns_app, null, true);

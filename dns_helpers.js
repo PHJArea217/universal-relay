@@ -225,9 +225,26 @@ function make_output_transform_ip(numbers_only, ranges) {
 		return [result, user_obj];
 	};
 }
+function make_output_transform_domain(base_domain) {
+	return function (input2) {
+		let input = input2[0];
+		let user_obj = input2[1];
+		let result = [];
+		result.push(...base_domain);
+		let result_sub = input.split('|');
+		if (result_sub[0]) {
+			result.push(...result_sub);
+		}
+		let temp_ep = (new endpoint.Endpoint()).setDomain2(result, false);
+		let domain_string = temp_ep.getDomainString();
+		return [[{qtype: "PTR", content: (domain_string === '.') ? '.' : (domain_string + '.')}], user_obj];
+	};
+}
 exports.handle_inaddr_arpa = handle_inaddr_arpa;
 exports.handle_ip6_arpa = handle_ip6_arpa;
 exports.make_bidir_map = make_bidir_map;
 exports.make_lookup_mapping = make_lookup_mapping;
 exports.make_soa_ns_handler = make_soa_ns_handler;
 exports.make_acme_challenge_handler = make_acme_challenge_handler;
+exports.make_output_transform_ip = make_output_transform_ip;
+exports.make_output_transform_domain = make_output_transform_domain;
