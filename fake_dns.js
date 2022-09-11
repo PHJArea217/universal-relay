@@ -290,11 +290,17 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 	 * but not found in dynamic map, a number >= 0n if IP is within
 	 * static region, and the actual domain name as a string if IP is
 	 * found within dynamic map.
+	 * raw = 0 -> ip_buf is buffer containing full ipv6 address.
+	 * raw = 1 -> ip_buf is bigint containing full ipv6 address.
+	 * raw = 2 -> ip_buf is bigint containing bottom 64 bits of ipv6 address.
 	 */
-	_result.query_ip = function (ip_buf, success_array) {
-		if (ip_buf.byteLength !== 16) return -1n;
-		let full_ip_num = ipToBigInt(ip_buf);
-		let iid = find_urelay_iid(_result.prefix, full_ip_num);
+	_result.query_ip = function (ip_buf, success_array, raw) {
+		let full_ip_num = ip_buf;
+		if (!raw) {
+			if (ip_buf.byteLength !== 16) return -1n;
+			full_ip_num = ipToBigInt(ip_buf);
+		}
+		let iid = find_urelay_iid((raw === 2) ? 0n : _result.prefix, full_ip_num);
 		if (iid === -2n) {
 			return full_ip_num & ((1n<<64n)-1n); /* 0xffffffffffffffffn */
 		}

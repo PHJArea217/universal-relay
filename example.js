@@ -7,6 +7,7 @@ const dns_he = require('./dns_he.js');
 const domain_parser = require('./domain_parser.js');
 const transparent_server = require('./transparent_server.js');
 const fake_dns = require('./fake_dns.js');
+const dns_helpers = require('./dns_helpers.js');
 const express = require('express');
 const dns = require('dns');
 const my_dns_resolver = new dns.Resolver();
@@ -31,6 +32,8 @@ my_dns_resolver.setServers(['8.8.8.8']);
 const ipv6_prefix = 0xfedb120045007800n;
 var ip_domain_map = fake_dns.make_urelay_ip_domain_map(ipv6_prefix, (domain_unused, endpoint_object) => {
 	let override_ip = domain_to_ip_static_map.get(endpoint_object.getDomainString());
+	let r_domain = [];
+	let fallthrough = true;
 	if (override_ip) {
 		if (override_ip[0]) return override_ip[1];
 		endpoint_object.setIPBigInt((ipv6_prefix << 64n) | (0x200000000n) | (BigInt(override_ip[1]) & 0xffffffffn));
@@ -39,7 +42,27 @@ var ip_domain_map = fake_dns.make_urelay_ip_domain_map(ipv6_prefix, (domain_unus
 	endpoint_object.getSubdomainsOfThen(['arpa', 'home', 'u-relay'], 1, (res, t) => {
 		if (res[0]) t.setDomain(['arpa', 'home', 'u-relay', res[0]]);
 	});
-	return domain_parser.urelay_dns_override(endpoint_object.getDomain());
+	endpoint_object.getSubdomainsOfThen(['arpa', 'ip6'], 32, (res, t) => {
+		fallthrough = false;
+		let ip6_address = dns_helpers.handle_ip6_arpa(res);
+		let ip6_ep = new endpoint.Endpoint().setIPBigInt(ip6_address);
+		ip6_ep.getHostNRThen(ipv6_prefix << 64n, 64, (res2, t2) => {
+			let result_array = [false];
+			let r = ip_domain_map.query_ip(res2, result_array, 2);
+			if (result_array[0]) {
+				r_domain.push({qtype: 'PTR', content: (r === '.') ? '.' : (r + '.')});
+			}
+		});
+	});
+	if (fallthrough) {
+		let udo_result = domain_parser.urelay_dns_override(endpoint_object.getDomain());
+		if (udo_result) {
+			r_domain.push(...udo_result);
+		} else {
+			r_domain.push(null);
+		}
+	}
+	return r_domain;
 });
 var pdns_backend_app = express();
 ip_domain_map.make_pdns_express_app(pdns_backend_app);
