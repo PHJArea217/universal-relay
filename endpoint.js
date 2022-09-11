@@ -1,12 +1,14 @@
 'use strict';
 const ip = require('ip');
 const net = require('net');
-function Endpoint() {
-	this.ip_ = 0n;
-	this.domain_ = null;
-	this.options_map_ = new Map();
-	this.port_ = 0;
-	this.setIPBigInt = function (newIP) {
+class Endpoint {
+	constructor () {
+		this.ip_ = 0n;
+		this.domain_ = null;
+		this.options_map_ = new Map();
+		this.port_ = 0;
+	}
+	setIPBigInt (newIP) {
 		if ((newIP >= 0n) && (newIP < (1n<<128n))) {
 			this.ip_ = newIP;
 			this.domain_ = null;
@@ -14,8 +16,8 @@ function Endpoint() {
 		} else {
 			throw new Error("newIP must be between 0n and (1n<<128n)-1");
 		}
-	};
-	this.setIPBuffer = function (newIP) {
+	}
+	setIPBuffer (newIP) {
 		let result_bi = 0n;
 		if (newIP.length === 4) {
 			result_bi = BigInt(newIP.readUInt32BE(0)) | 0xffff00000000n;
@@ -28,11 +30,11 @@ function Endpoint() {
 			throw new Error('newIP buffer must be of length 4 or 16');
 		}
 		return this.setIPBigInt(result_bi);
-	};
-	this.setIPString = function (newIP) {
+	}
+	setIPString (newIP) {
 		return this.setIPBuffer(ip.toBuffer(newIP));
-	};
-	this.setIPStringWithScope = function (newIP) {
+	}
+	setIPStringWithScope (newIP) {
 		let newIPString = String(newIP);
 		let percent_position = newIPString.indexOf('%');
 		if (percent_position >= 0) {
@@ -42,11 +44,11 @@ function Endpoint() {
 		} else {
 			return this.setIPString(newIPString);
 		}
-	};
-	this.getIPBigInt = function () {
+	}
+	getIPBigInt () {
 		return this.ip_;
-	};
-	this.getIPBuffer = function () {
+	}
+	getIPBuffer () {
 		let v4_host_nr = this.getHostNR(0xffff00000000n, 96);
 		if (v4_host_nr >= 0n) {
 			let newbuf = Buffer.allocUnsafe(4);
@@ -60,11 +62,11 @@ function Endpoint() {
 			newbuf.writeUInt32BE(Number((this.ip_ >> 0n) & 0xffffffffn), 12);
 			return newbuf;
 		}
-	};
-	this.getIPString = function () {
+	}
+	getIPString () {
 		return ip.toString(this.getIPBuffer());
-	};
-	this.setDomain2 = function (domain, convert_to_ip) {
+	}
+	setDomain2 (domain, convert_to_ip) {
 		let d = domain;
 		if (!d) {
 			throw new Error("Domain undefined or null");
@@ -99,11 +101,11 @@ function Endpoint() {
 		this.domain_ = r;
 		this.ip_ = 0n;
 		return this;
-	};
-	this.setDomain = function (domain) {
+	}
+	setDomain (domain) {
 		return this.setDomain2(domain, true);
-	};
-	this.getHostNR = function (prefix, length) {
+	}
+	getHostNR (prefix, length) {
 		let bitmask = 128n - BigInt(length);
 		if ((bitmask < 0n) || (bitmask > 128n)) {
 			throw new Error('Prefix length must be between 0 and 128 inclusive');
@@ -114,11 +116,11 @@ function Endpoint() {
 			return this.ip_ & host_mask;
 		}
 		return -1n;
-	};
-	this.getPort = function () {
+	}
+	getPort () {
 		return this.port_;
-	};
-	this.setPort = function (port) {
+	}
+	setPort (port) {
 		let port_number = Number(port);
 		if (port_number !== Math.floor(port_number)) {
 			throw new Error("Port number must be an integer");
@@ -131,18 +133,18 @@ function Endpoint() {
 		}
 		this.port_ = port_number;
 		return this;
-	};
-	this.getDomain = function () {
+	}
+	getDomain () {
 		return this.domain_;
-	};
-	this.getDomainString = function () {
+	}
+	getDomainString () {
 		if (!this.domain_) return null;
 		if (this.domain_.length === 0) return ".";
 		let d = this.domain_.slice();
 		d.reverse();
 		return d.join('.');
-	};
-	this.getSubdomainsOf = function (base_domain, nr_parts_to_keep) {
+	}
+	getSubdomainsOf (base_domain, nr_parts_to_keep) {
 		if (!this.domain_) {
 			return null;
 		}
@@ -154,8 +156,8 @@ function Endpoint() {
 			}
 		}
 		return this.domain_.slice(domain_length, domain_length + nr_parts_to_keep);
-	};
-	this.resolveDynamic = async function (resolver, options_) {
+	}
+	async resolveDynamic (resolver, options_) {
 		let cloned_this = this.clone();
 		let options = options_ || {};
 		if (!this.domain_) {
@@ -180,8 +182,8 @@ function Endpoint() {
 			}
 		}
 		return result_array;
-	};
-	this.clone = function () {
+	}
+	clone () {
 		let cloned_this = new Endpoint();
 		cloned_this.ip_ = this.ip_;
 		cloned_this.domain_ = this.domain_ ? this.domain_.slice() : null;
@@ -190,8 +192,8 @@ function Endpoint() {
 			cloned_this.options_map_.set(e[0], e[1]);
 		}
 		return cloned_this;
-	};
-	this.toCRAreq = function () {
+	}
+	toCRAreq () {
 		if (this.domain_) {
 			return {
 				type: 'domain',
@@ -207,8 +209,8 @@ function Endpoint() {
 				__orig_endpoint__: this
 			};
 		}
-	};
-	this.toNCCOptions = function () {
+	}
+	toNCCOptions () {
 		let unix_path = this.options_map_.get('!unix_path');
 		if (unix_path) {
 			return {'path': unix_path};
@@ -235,21 +237,21 @@ function Endpoint() {
 			result_object.localAddress = localAddr;
 		}
 		return result_object;
-	};
-	this.getHostNRThen = function (prefix, length, callback) {
+	}
+	getHostNRThen (prefix, length, callback) {
 		let result = this.getHostNR(prefix, length);
 		if (result >= 0n) {
 			return callback(result, this);
 		}
 		return undefined;
-	};
-	this.getSubdomainsOfThen = function (domain, nr_parts, callback) {
+	}
+	getSubdomainsOfThen (domain, nr_parts, callback) {
 		let result = this.getSubdomainsOf(domain, nr_parts);
 		if (result) {
 			return callback(result, this);
 		}
 		return undefined;
-	};
+	}
 }
 exports.Endpoint = Endpoint;
 exports.fromCRAreq = function (req) {
