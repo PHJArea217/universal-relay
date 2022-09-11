@@ -45,6 +45,7 @@ var ip_domain_map = fake_dns.make_urelay_ip_domain_map(ipv6_prefix, (domain_unus
 	endpoint_object.getSubdomainsOfThen(['arpa', 'ip6'], 32, (res, t) => {
 		fallthrough = false;
 		let ip6_address = dns_helpers.handle_ip6_arpa(res);
+		if (ip6_address < 0n) return;
 		let ip6_ep = new endpoint.Endpoint().setIPBigInt(ip6_address);
 		ip6_ep.getHostNRThen(ipv6_prefix << 64n, 64, (res2, t2) => {
 			let result_array = [false];
