@@ -14,6 +14,7 @@ const my_dns_resolver = new dns.Resolver();
 const domain_to_ip_static_map = new Map();
 const ip_to_domain_static_map = new Map();
 const domain_ip_special = require('./example-static-map.json');
+const config = JSON.parse(process.argv[2] || '{}');
 for (let e of domain_ip_special.relay_map) {
 	domain_to_ip_static_map.set(e[0], [false, e[1]]);
 	ip_to_domain_static_map.set(e[1], e[0]);
@@ -24,12 +25,12 @@ for (let e of domain_ip_special.dns_map) {
 const hosts_map = new Map(domain_ip_special.hosts_map || []);
 const resolve_map = new Map(domain_ip_special.resolve_map || []);
 /* Set IP addresses of custom DNS servers. Universal Relay's fake_dns does not have a DNS cache, so it should be one that already has a cache, preferably a local server. */
-my_dns_resolver.setServers(['8.8.8.8']);
+my_dns_resolver.setServers(config.dns || ['8.8.8.8']);
 
 /* Fake DNS server (PowerDNS backend)
  * Prefix argument corresponds to fedb:1200:4500:7800::/64
  */
-const ipv6_prefix = 0xfedb120045007800n;
+const ipv6_prefix = BigInt(config.prefix || "0xfedb120045007800");
 var ip_domain_map = fake_dns.make_urelay_ip_domain_map(ipv6_prefix, (domain_unused, endpoint_object) => {
 	let override_ip = domain_to_ip_static_map.get(endpoint_object.getDomainString());
 	let r_domain = [];
@@ -70,7 +71,7 @@ ip_domain_map.make_pdns_express_app(pdns_backend_app);
 
 // ctrtool ns_open_file [...] -n -d inet -t stream -4 127.0.0.10,81,a [-N /path/to/private-side/network-namespace] [-U] [...] node example.js
 // Can't do listen(3000) or similar due to the network namespace and IP_TRANSPARENT requirement!
-pdns_backend_app.listen({fd: +process.env.CTRTOOL_NS_OPEN_FILE_FD_10});
+pdns_backend_app.listen(config.pdns_fd || {fd: +process.env.CTRTOOL_NS_OPEN_FILE_FD_10});
 
 async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 	/* Recover the domain if the transparent server was used */
@@ -137,5 +138,5 @@ var my_transparent_server = server_generic.make_server(transparent_server.transp
 var my_socks_server = server_generic.make_server(socks_server.socks_server, (e, s) => common_ip_rewrite(e, s, false), dns_he.simple_connect_HE);
 var transparent_server_obj = net.createServer({allowHalfOpen: true, pauseOnConnect: true}, my_transparent_server);
 var socks_server_obj = net.createServer({allowHalfOpen: true, pauseOnConnect: true}, my_socks_server);
-transparent_server_obj.listen({fd: +process.env.CTRTOOL_NS_OPEN_FILE_FD_11});
-socks_server_obj.listen({fd: +process.env.CTRTOOL_NS_OPEN_FILE_FD_12});
+if (config.transparent_fd !== false) transparent_server_obj.listen(config.transparent_fd || {fd: +process.env.CTRTOOL_NS_OPEN_FILE_FD_11});
+if (config.socks_fd !== false) socks_server_obj.listen(config.socks_fd || {fd: +process.env.CTRTOOL_NS_OPEN_FILE_FD_12});
