@@ -31,6 +31,14 @@ my_dns_resolver.setServers(config.dns || ['8.8.8.8']);
  * Prefix argument corresponds to fedb:1200:4500:7800::/64
  */
 const ipv6_prefix = BigInt(config.prefix || "0xfedb120045007800");
+const nat64_a = (new endpoint.Endpoint()).setIPBigInt((ipv6_prefix << 64n) | 0x5ff6464c00000aan).getIPString();
+const nat64_b = (new endpoint.Endpoint()).setIPBigInt((ipv6_prefix << 64n) | 0x5ff6464c00000abn).getIPString();
+domain_to_ip_static_map.set("ipv4only.arpa", [true, [
+	{qtype: "A", content: "192.0.0.170"},
+	{qtype: "A", content: "192.0.0.171"},
+	{qtype: "AAAA", content: nat64_a},
+	{qtype: "AAAA", content: nat64_b}
+]]);
 var ip_domain_map = fake_dns.make_urelay_ip_domain_map(ipv6_prefix, (domain_unused, endpoint_object) => {
 	let override_ip = domain_to_ip_static_map.get(endpoint_object.getDomainString());
 	let r_domain = [];
