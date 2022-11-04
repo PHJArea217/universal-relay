@@ -13,18 +13,22 @@ function extractSubdomains(domain, suffix) {
 function urelay_handle_special_domain_part(special_part, allow_linklocal) {
 	if (special_part.startsWith('ip4-')) {
 		let result = '';
+		let linklocal_part = '';
 		for (let i = 4; i < special_part.length; i++) {
 			let cc = special_part.charCodeAt(i);
 			if ((cc >= 0x30) && (cc <= 0x39)) {
 				result += '' + (cc - 0x30);
 			} else if (cc === 0x2d) /* '-' */ {
 				result += '.';
+			} else if ((allow_linklocal === 2) && (cc === 0x73)) /* 's' */ {
+				linklocal_part = '%' + special_part.substring(i + 1);
+				break;
 			} else {
 				return [];
 			}
 		}
 		if (net.isIPv4(result)) {
-			return [result]; /* FIXME: canonicalization? */
+			return [result + linklocal_part]; /* FIXME: canonicalization? */
 		}
 		return [];
 	} else if (special_part.startsWith('ip6-')) {
