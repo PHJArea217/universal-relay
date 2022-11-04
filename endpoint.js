@@ -226,7 +226,10 @@ class Endpoint {
 				if (this.getHostNR(0xfe80n<<112n, 10) >= 0n) {
 					let scope_id = this.options_map_.get('!ipv6_scope');
 					if (scope_id) {
-						result_object.host += '%' + scope_id;
+						scope_id = String(scope_id);
+						if (!scope_id.startsWith('-')) {
+							result_object.host += '%' + scope_id;
+						}
 					}
 				}
 			}
