@@ -86,16 +86,22 @@ pdns_backend_app.listen(config.pdns_fd || {fd: +process.env.CTRTOOL_NS_OPEN_FILE
 
 async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 	/* Recover the domain if the transparent server was used */
-	let rewrite_CRA_req_retval = ip_domain_map.rewrite_CRA_req(my_cra.req);
+	let rewrite_CRA_req_retval = -1n;
+	let ep_pre_lookup = endpoint.fromCRAreq(my_cra.req);
+	let ep_host = ep_pre_lookup.getHostNR(ipv6_prefix << 64n, 64);
+	if (ep_host >= 0n) {
+		rewrite_CRA_req_retval = ip_domain_map.rewrite_CRA_req(my_cra.req, 2, ep_host);
+	}
 	let my_endpoint = null;
 	switch (rewrite_CRA_req_retval) {
 		case -4n:
 			/* Only allow the domain to be used if the transparent server (instead of the SOCKS server) is used */
 			if (!is_transparent) throw new Error();
+			/* my_cra.req changed after call to rewrite_CRA_req */
 			my_endpoint = endpoint.fromCRAreq(my_cra.req);
 			break;
 		case -1n: /* not within the ipv6_prefix */
-			my_endpoint = endpoint.fromCRAreq(my_cra.req);
+			my_endpoint = ep_pre_lookup;
 			break;
 		default:
 			if (rewrite_CRA_req_retval >= 0n) {

@@ -316,12 +316,15 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 	 * is associated with a domain, then the req object is rewritten to be
 	 * of type 'domain' and the host is set to that domain, and -4n is
 	 * returned to indicate success. Otherwise, the return values are the
-	 * same as those of query_ip. */
-	_result.rewrite_CRA_req = function (req) {
-		if (req.type !== 'ipv6') return -1n;
+	 * same as those of query_ip.
+	 * If raw is 1 or 2, then ip_bigint will be used as key for ip->domain
+	 * lookups instead of the ipv6 address in the original req object.
+	 */
+	_result.rewrite_CRA_req = function (req, raw, ip_bigint) {
+		if ((!raw) && (req.type !== 'ipv6')) return -1n;
 		try {
 			let success_array = [false];
-			let result_domain = _result.query_ip(ip.toBuffer(req.host), success_array);
+			let result_domain = _result.query_ip(raw ? ip_bigint : ip.toBuffer(req.host), success_array, raw);
 			if (success_array[0]) {
 //				console.log(result_domain);
 				req.type = 'domain';
