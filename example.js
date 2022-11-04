@@ -39,7 +39,13 @@ domain_to_ip_static_map.set("ipv4only.arpa", [true, [
 	{qtype: "AAAA", content: nat64_a},
 	{qtype: "AAAA", content: nat64_b}
 ]]);
+function domain_canonicalizer(ep) {
+	ep.getSubdomainsOfThen(['arpa', 'home', 'u-relay'], 1, (res, t) => {
+		if (res[0]) t.setDomain(['arpa', 'home', 'u-relay', res[0]]);
+	});
+}
 var ip_domain_map = fake_dns.make_urelay_ip_domain_map(ipv6_prefix, (domain_unused, endpoint_object) => {
+	domain_canonicalizer(endpoint_object);
 	let override_ip = domain_to_ip_static_map.get(endpoint_object.getDomainString());
 	let r_domain = [];
 	let fallthrough = true;
@@ -48,9 +54,6 @@ var ip_domain_map = fake_dns.make_urelay_ip_domain_map(ipv6_prefix, (domain_unus
 		endpoint_object.setIPBigInt((ipv6_prefix << 64n) | (0x200000000n) | (BigInt(override_ip[1]) & 0xffffffffn));
 		return undefined;
 	}
-	endpoint_object.getSubdomainsOfThen(['arpa', 'home', 'u-relay'], 1, (res, t) => {
-		if (res[0]) t.setDomain(['arpa', 'home', 'u-relay', res[0]]);
-	});
 	endpoint_object.getSubdomainsOfThen(['arpa', 'ip6'], 32, (res, t) => {
 		fallthrough = false;
 		let ip6_address = dns_helpers.handle_ip6_arpa(res);
@@ -114,6 +117,7 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 	}
 	if (!my_endpoint) throw new Error();
 	/* Resolve the domain name in the my_endpoint object, if it is a "domain" type */
+	domain_canonicalizer(my_endpoint);
 	my_endpoint.getSubdomainsOfThen(['arpa', 'home', 'u-relay'], 1, (res, t) => {
 		let res_str = String(res[0] || '');
 		let res_ip = hosts_map.get(res_str) || domain_parser.urelay_handle_special_domain_part(res_str, true) || [];
