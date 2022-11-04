@@ -51,7 +51,7 @@ var ip_domain_map = fake_dns.make_urelay_ip_domain_map(ipv6_prefix, (domain_unus
 	let fallthrough = true;
 	if (override_ip) {
 		if (override_ip[0]) return override_ip[1];
-		endpoint_object.setIPBigInt((ipv6_prefix << 64n) | (0x200000000n) | (BigInt(override_ip[1]) & 0xffffffffn));
+		endpoint_object.setIPBigInt((ipv6_prefix << 64n) | (0x5ff700100000000n) | (BigInt(override_ip[1]) & 0xffffffffn));
 		return undefined;
 	}
 	endpoint_object.getSubdomainsOfThen(['arpa', 'ip6'], 32, (res, t) => {
@@ -105,11 +105,14 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 					case 0x5ff6464n:
 						my_endpoint = (new endpoint.Endpoint()).setIPBigInt(0xffff00000000n | minor).setPort(my_cra.req.port);
 						break;
-					case 2n:
+					case 0x5ff7001n:
 						let lookup_result = ip_to_domain_static_map.get(Number(minor));
 						if (lookup_result) {
 							my_endpoint = (new endpoint.Endpoint()).setDomain(lookup_result).setPort(my_cra.req.port);
 						}
+						break;
+					case 0x5ff7002n:
+						my_endpoint = (new endpoint.Endpoint()).setDomain(`i-host-${minor.toString(16)}.u-relay.home.arpa`).setPort(my_cra.req.port);
 						break;
 				}
 			}
