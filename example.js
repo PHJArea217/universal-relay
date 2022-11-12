@@ -127,9 +127,11 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 	if (!my_endpoint) throw new Error();
 	/* Resolve the domain name in the my_endpoint object, if it is a "domain" type */
 	domain_canonicalizer(my_endpoint);
+	let no_resolve_dns = false;
 	my_endpoint.getSubdomainsOfThen(['arpa', 'home', 'u-relay'], 1, (res, t) => {
+		no_resolve_dns = true;
 		let res_str = String(res[0] || '');
-		let res_ip = hosts_map.get(res_str) || domain_parser.urelay_handle_special_domain_part(res_str, true) || [];
+		let res_ip = hosts_map.get(res_str) || domain_parser.urelay_handle_special_domain_part(res_str, true);
 		if (res_ip) {
 			if (!Array.isArray(res_ip)) res_ip = [res_ip];
 			if (res_ip[0]) {
@@ -143,6 +145,9 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 		let resolve_map_override = resolve_map.get(domain_name);
 		if (resolve_map_override) {
 			return resolve_map_override;
+		}
+		if (no_resolve_dns) {
+			return [];
 		}
 		return await dns_he.resolve_dns_dualstack(domain_name, my_dns_resolver, '6_weak', /*domain_parser.urelay_handle_special_domain*/ null);
 	}, {ipOnly: true});
