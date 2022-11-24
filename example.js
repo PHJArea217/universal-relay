@@ -40,15 +40,15 @@ domain_to_ip_static_map.set("ipv4only.arpa", [true, [
 	{qtype: "AAAA", content: nat64_a},
 	{qtype: "AAAA", content: nat64_b}
 ]]);
-function domain_canonicalizer(ep) {
-	if (user_hooks.domain_canonicalizer(config, ep)) return;
+async function domain_canonicalizer(ep) {
+	if (await user_hooks.domain_canonicalizer(config, ep)) return;
 	ep.getSubdomainsOfThen(['arpa', 'home', 'u-relay'], 1, (res, t) => {
 		if (res[0]) t.setDomain(['arpa', 'home', 'u-relay', res[0]]);
 	});
 }
-var ip_domain_map = fake_dns.make_urelay_ip_domain_map(ipv6_prefix, (domain_unused, endpoint_object) => {
-	domain_canonicalizer(endpoint_object);
-	let user_hook_result = user_hooks.dns_map(config, endpoint_object, ipv6_prefix);
+var ip_domain_map = fake_dns.make_urelay_ip_domain_map(ipv6_prefix, async (domain_unused, endpoint_object) => {
+	await domain_canonicalizer(endpoint_object);
+	let user_hook_result = await user_hooks.dns_map(config, endpoint_object, ipv6_prefix);
 	if (user_hook_result) return user_hook_result;
 	let override_ip = domain_to_ip_static_map.get(endpoint_object.getDomainString());
 	let r_domain = [];
@@ -93,7 +93,7 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 	let rewrite_CRA_req_retval = -1n;
 	let user_hook_state = {};
 	let ep_pre_lookup = endpoint.fromCRAreq(my_cra.req);
-	user_hooks.pre_lookup(config, user_hook_state, ep_pre_lookup, my_socket, ipv6_prefix, is_transparent);
+	await user_hooks.pre_lookup(config, user_hook_state, ep_pre_lookup, my_socket, ipv6_prefix, is_transparent);
 	let ep_host = ep_pre_lookup.getHostNR(ipv6_prefix << 64n, 64);
 	if (ep_host >= 0n) {
 		if (is_transparent) {
@@ -131,7 +131,7 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 						my_endpoint = (new endpoint.Endpoint()).setDomain(`i-host-${minor.toString(16)}.u-relay.home.arpa`).setPort(my_cra.req.port);
 						break;
 					default:
-						my_endpoint = user_hooks.handle_static_region(config, user_hook_state, {major: major, minor: minor}, ep_pre_lookup);
+						my_endpoint = await user_hooks.handle_static_region(config, user_hook_state, {major: major, minor: minor}, ep_pre_lookup);
 						break;
 				}
 			}
@@ -139,12 +139,12 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 	}
 	if (!my_endpoint) throw new Error();
 	/* Resolve the domain name in the my_endpoint object, if it is a "domain" type */
-	domain_canonicalizer(my_endpoint);
+	await domain_canonicalizer(my_endpoint);
 	let no_resolve_dns = false;
 	my_endpoint.getSubdomainsOfThen(['arpa', 'home', 'u-relay'], 1, (res, t) => {
 		no_resolve_dns = true;
 		let res_str = String(res[0] || '');
-		let res_ip = user_hooks.hosts_map(config, user_hook_state, res_str, t) || hosts_map.get(res_str) || domain_parser.urelay_handle_special_domain_part(res_str, true);
+		let res_ip = (await user_hooks.hosts_map(config, user_hook_state, res_str, t)) || hosts_map.get(res_str) || domain_parser.urelay_handle_special_domain_part(res_str, true);
 		if (res_ip) {
 			if (!Array.isArray(res_ip)) res_ip = [res_ip];
 			if (res_ip[0]) {
@@ -155,7 +155,7 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 		}
 	});
 	let resolvedIPEndpoints = await my_endpoint.resolveDynamic(async (domain_parts, domain_name, ep) => {
-		let resolve_map_override = user_hooks.resolve_map(config, user_hook_state, domain_name, ep) || resolve_map.get(domain_name);
+		let resolve_map_override = await user_hooks.resolve_map(config, user_hook_state, domain_name, ep) || resolve_map.get(domain_name);
 		if (resolve_map_override) {
 			return resolve_map_override;
 		}
@@ -164,7 +164,7 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 		}
 		return await dns_he.resolve_dns_dualstack(domain_name, my_dns_resolver, '6_weak', /*domain_parser.urelay_handle_special_domain*/ null);
 	}, {ipOnly: true});
-	let transform_all_result = user_hooks.transform_all_resolved_endpoints(config, user_hook_state, resolvedIPEndpoints, my_endpoint) || {};
+	let transform_all_result = (await user_hooks.transform_all_resolved_endpoints(config, user_hook_state, resolvedIPEndpoints, my_endpoint)) || {};
 	let resultIPs = null;
 	let override_client = null;
 	if (transform_all_result.hasOwnProperty('override_ip_list')) {
@@ -181,7 +181,7 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 		for (let r of resolvedIPEndpoints) {
 			/* NAT64 CLAT with well-known prefix 64:ff9b::/96 */
 			// r.getHostNRThen(0xffff00000000n, 96, (res, t) => t.setIPBigInt(res | (0x64ff9bn << 96n)));
-			user_hooks.transform_resolved_endpoint(config, user_hook_state, r, my_endpoint);
+			await user_hooks.transform_resolved_endpoint(config, user_hook_state, r, my_endpoint);
 			if (!r.domain_) resultIPs.push(r.toCRAreq());
 		}
 	}
