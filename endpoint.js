@@ -298,3 +298,6 @@ exports.ofPrefix = function(prefix) {
 	}
 	return [new Endpoint().setIPString(ipAddr).getIPBigInt(), length];
 }
+exports.ofDomain = function(domain) {
+	return new Endpoint().setDomain2(domain, false).getDomain();
+}
