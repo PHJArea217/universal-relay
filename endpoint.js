@@ -105,17 +105,28 @@ class Endpoint {
 	setDomain (domain) {
 		return this.setDomain2(domain, true);
 	}
-	getHostNR (prefix, length) {
+	getHostNRLex (prefix, length) {
 		let bitmask = 128n - BigInt(length);
 		if ((bitmask < 0n) || (bitmask > 128n)) {
 			throw new Error('Prefix length must be between 0 and 128 inclusive');
 		}
 		let host_mask = (1n << bitmask) - 1n;
 		let network_mask = (1n << 128n) - (1n << bitmask);
-		if ((this.ip_ & network_mask) === (prefix & network_mask)) {
+		let a = this.ip_ & network_mask;
+		let b = prefix & network_mask;
+		if (a === b) {
 			return this.ip_ & host_mask;
+		} else if (a > b) {
+			return -1n;
+		} else if (a < b) {
+			return -2n;
 		}
-		return -1n;
+		throw new Error();
+	}
+	getHostNR (prefix, length) {
+		let result = this.getHostNRLex(prefix, length);
+		if (result < 0n) return -1n;
+		return result;
 	}
 	getPort () {
 		return this.port_;
@@ -144,18 +155,29 @@ class Endpoint {
 		d.reverse();
 		return d.join('.');
 	}
-	getSubdomainsOf (base_domain, nr_parts_to_keep) {
+	getSubdomainsOfLex (base_domain, nr_parts_to_keep) {
 		if (!this.domain_) {
 			return null;
 		}
 		let domain_length = base_domain.length;
 		for (let i = 0; i < domain_length; i++) {
-			if (this.domain_[i] === base_domain[i]) {
+			let a = this.domain_[i];
+			let b = base_domain[i];
+			if (a > b) {
+				return -1n;
+			} else if (a < b) {
+				return -2n;
+			} else if (a === b) {
 			} else {
-				return null;
+				throw new Error();
 			}
 		}
 		return this.domain_.slice(domain_length, domain_length + nr_parts_to_keep);
+	}
+	getSubdomainsOf (base_domain, nr_parts_to_keep) {
+		let result = this.getSubdomainsOfLex(base_domain, nr_parts_to_keep);
+		if (Array.isArray(result)) return result;
+		return null;
 	}
 	async resolveDynamic (resolver, options_) {
 		let cloned_this = this.clone();
@@ -265,4 +287,14 @@ exports.ofLocal = function (s) {
 }
 exports.ofRemote = function (s) {
 	return (new Endpoint()).setIPStringWithScope(s.remoteAddress).setPort(s.remotePort);
+}
+exports.ofPrefix = function(prefix) {
+	let ipAddr = prefix;
+	let length = 128n;
+	let i = prefix.indexOf('/');
+	if (i >= 0) {
+		ipAddr = prefix.substring(0, i);
+		length = BigInt(prefix.substring(i+1)) + ((ipAddr.indexOf(':') >= 0) ? 0n : 96n);
+	}
+	return [new Endpoint().setIPString(ipAddr).getIPBigInt(), length];
 }
