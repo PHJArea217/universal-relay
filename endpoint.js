@@ -66,13 +66,13 @@ class Endpoint {
 	getIPString () {
 		return ip.toString(this.getIPBuffer());
 	}
-	setDomain2 (domain, convert_to_ip) {
-		let d = domain;
+	setDomain2 (domain__, convert_to_ip) {
+		let d = domain__;
 		if (!d) {
 			throw new Error("Domain undefined or null");
 		}
 		if (!Array.isArray(d)) {
-			d = String(domain);
+			d = String(domain__);
 			/* Corner case for DNS root */
 			if (d === '.') {
 				this.domain_ = [];
@@ -102,8 +102,8 @@ class Endpoint {
 		this.ip_ = 0n;
 		return this;
 	}
-	setDomain (domain) {
-		return this.setDomain2(domain, true);
+	setDomain (domain__) {
+		return this.setDomain2(domain__, true);
 	}
 	getHostNRLex (prefix, length) {
 		let bitmask = 128n - BigInt(length);
@@ -270,8 +270,8 @@ class Endpoint {
 		}
 		return undefined;
 	}
-	getSubdomainsOfThen (domain, nr_parts, callback) {
-		let result = this.getSubdomainsOf(domain, nr_parts);
+	getSubdomainsOfThen (domain__, nr_parts, callback) {
+		let result = this.getSubdomainsOf(domain__, nr_parts);
 		if (result) {
 			return callback(result, this);
 		}
@@ -298,6 +298,6 @@ exports.ofPrefix = function(prefix) {
 	}
 	return [new Endpoint().setIPString(ipAddr).getIPBigInt(), length];
 }
-exports.ofDomain = function(domain) {
-	return new Endpoint().setDomain2(domain, false).getDomain();
+exports.ofDomain = function(domain__) {
+	return new Endpoint().setDomain2(domain__, false).getDomain();
 }
