@@ -141,19 +141,20 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 	/* Resolve the domain name in the my_endpoint object, if it is a "domain" type */
 	await domain_canonicalizer(my_endpoint);
 	let no_resolve_dns = false;
-	my_endpoint.getSubdomainsOfThen(['arpa', 'home', 'u-relay'], 1, (res, t) => {
+	let special_result = my_endpoint.getSubdomainsOfThen(['arpa', 'home', 'u-relay'], 1);
+	if (special_result) {
 		no_resolve_dns = true;
-		let res_str = String(res[0] || '');
-		let res_ip = (await user_hooks.hosts_map(config, user_hook_state, res_str, t)) || hosts_map.get(res_str) || domain_parser.urelay_handle_special_domain_part(res_str, true);
+		let res_str = String(special_result[0] || '');
+		let res_ip = (await user_hooks.hosts_map(config, user_hook_state, res_str, my_endpoint)) || hosts_map.get(res_str) || domain_parser.urelay_handle_special_domain_part(res_str, true);
 		if (res_ip) {
 			if (!Array.isArray(res_ip)) res_ip = [res_ip];
 			if (res_ip[0]) {
-				t.setIPStringWithScope(String(res_ip[0]));
+				my_endpoint.setIPStringWithScope(String(res_ip[0]));
 			} else {
 				throw new Error();
 			}
 		}
-	});
+	}
 	let resolvedIPEndpoints = await my_endpoint.resolveDynamic(async (domain_parts, domain_name, ep) => {
 		let resolve_map_override = await user_hooks.resolve_map(config, user_hook_state, domain_name, ep) || resolve_map.get(domain_name);
 		if (resolve_map_override) {
