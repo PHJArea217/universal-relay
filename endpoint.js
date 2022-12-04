@@ -163,10 +163,10 @@ class Endpoint {
 		for (let i = 0; i < domain_length; i++) {
 			let a = this.domain_[i];
 			let b = base_domain[i];
-			if (a > b) {
-				return -1n;
-			} else if (a < b) {
+			if ((!a) || (a < b)) {
 				return -2n;
+			} else if (a > b) {
+				return -1n;
 			} else if (a === b) {
 			} else {
 				throw new Error();
