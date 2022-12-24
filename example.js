@@ -141,7 +141,7 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 	/* Resolve the domain name in the my_endpoint object, if it is a "domain" type */
 	await domain_canonicalizer(my_endpoint);
 	let no_resolve_dns = false;
-	let special_result = my_endpoint.getSubdomainsOfThen(['arpa', 'home', 'u-relay'], 1);
+	let special_result = my_endpoint.getSubdomainsOf(['arpa', 'home', 'u-relay'], 1);
 	if (special_result) {
 		no_resolve_dns = true;
 		let res_str = String(special_result[0] || '');
