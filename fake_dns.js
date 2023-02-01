@@ -220,7 +220,25 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 							ttl: e.hasOwnProperty('ttl') ? e.ttl : 60,
 							content: e.content} : {qname: qname, qtype: 'AAAA',
 								ttl: 60, content: e};
+						let a6_synth = false;
+						if (fullEntry.qtype === 'URELAY-A6-SYNTH') {
+							fullEntry.qtype = 'AAAA';
+							a6_synth = true;
+						}
 						if ((qtype === 'ANY') || (qtype === fullEntry.qtype)) {
+							if (a6_synth && e.hasOwnProperty('a6_synth')) {
+								let a6_synth_val = BigInt(e.a6_synth);
+								fullEntry.content = [
+									((prefix >> 48n) & 0xffffn).toString(16),
+									((prefix >> 32n) & 0xffffn).toString(16),
+									((prefix >> 16n) & 0xffffn).toString(16),
+									((prefix >> 0n) & 0xffffn).toString(16),
+									((a6_synth_val >> 48n) & 0xffffn).toString(16),
+									((a6_synth_val >> 32n) & 0xffffn).toString(16),
+									((a6_synth_val >> 16n) & 0xffffn).toString(16),
+									((a6_synth_val >> 0n) & 0xffffn).toString(16)
+								].join(':');
+							}
 							result.push(fullEntry);
 						}
 					}
