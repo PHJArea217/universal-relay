@@ -1,6 +1,8 @@
 'use strict';
 // const fake_dns = require('./fake_dns.js');
 const net = require('net');
+const socks_server = require('./socks_server.js');
+const endpoint = require('./endpoint.js');
 function extractSubdomains(domain, suffix) {
 	if (domain.length < suffix.length) return null;
 	for (let i = 0; i < suffix.length; i++) {
@@ -72,7 +74,57 @@ function urelay_dns_override(domain_parts) {
 	if (extractSubdomains(domain_parts, ['localhost'])) return ['::1', {'qtype': 'A', 'content': '127.0.0.1'}];
 	return null;
 }
+function extract_groupsub_strings(domain_part) {
+	return String(domain_part).match(/^i-hx-([^-]+)-(.*)$/);
+}
+function apply_groupsub(groupsub_data, string2, ep) {
+	if (groupsub_data.ip_subst) {
+		let groupsub_prefix = groupsub_data.__cache__prefix || endpoint.ofPrefix(groupsub_data.ip_subst);
+		groupsub_data.__cache__prefix = groupsub_prefix;
+		let groupsub_prefix_limit = 1n << (128n - groupsub_prefix[1]);
+		let ip_val = -1n;
+		try {
+			let string2_bigint = BigInt(string2);
+			if ((string2_bigint >= 0n) && (string2_bigint < groupsub_prefix_limit)) {
+				ip_val = groupsub_prefix[0] | string2_bigint;
+			}
+		} catch (e) {
+			return null;
+		}
+		if (ip_val >= 0n) ep.setIPBigInt(ip_val);
+	}
+	if (groupsub_data.domain_subst)
+		ep.setDomain(groupsub_data.domain_subst.replaceAll('#', string2));
+	if (groupsub_data.bind_addr) {
+		ep.options_map_.set('!bind_addr', groupsub_data.bind_addr);
+	}
+	if (groupsub_data.ipv6_scope)
+		ep.options_map_.set('!ipv6_scope', groupsub_data.ipv6_scope);
+	if (groupsub_data.__cache__socks) {
+		return {client: groupsub_data.__cache_socks};
+	}
+	if (groupsub_data.socks_server) {
+		let cached_socks_server = socks_server.make_socks_client(groupsub_data.socks_server);
+		groupsub_data.__cache__socks = cached_socks_server;
+		return {client: cached_socks_server};
+	}
+	return {client: null};
+}
+function apply_groupsub_map(gs_map, domain_part, ep) {
+	let groupsub_strings = extract_groupsub_strings(domain_part);
+	if (groupsub_strings) {
+		let gs_map_result = gs_map.get(groupsub_strings[1]);
+		if (gs_map_result) {
+			let groupsub_result = apply_groupsub(gs_map_result, groupsub_strings[2], ep);
+			if (groupsub_result) return {connFunc: groupsub_result.client};
+		}
+	}
+	return null;
+}
 exports.extractSubdomains = extractSubdomains;
 exports.urelay_handle_special_domain = urelay_handle_special_domain;
 exports.urelay_handle_special_domain_part = urelay_handle_special_domain_part;
 exports.urelay_dns_override = urelay_dns_override;
+exports.extract_groupsub_strings = extract_groupsub_strings;
+exports.apply_groupsub = apply_groupsub;
+exports.apply_groupsub_map = apply_groupsub_map;

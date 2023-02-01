@@ -26,6 +26,7 @@ for (let e of domain_ip_special.dns_map) {
 }
 const hosts_map = new Map(domain_ip_special.hosts_map || []);
 const resolve_map = new Map(domain_ip_special.resolve_map || []);
+const gs_map = new Map(domain_ip_special.groupsub_map || []);
 /* Set IP addresses of custom DNS servers. Universal Relay's fake_dns does not have a DNS cache, so it should be one that already has a cache, preferably a local server. */
 my_dns_resolver.setServers(config.dns || ['8.8.8.8']);
 
@@ -131,8 +132,18 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 					case 0x5ff7002n:
 						my_endpoint = (new endpoint.Endpoint()).setDomain(`i-host-${minor.toString(16)}.u-relay.home.arpa`).setPort(my_cra.req.port);
 						break;
+					case 0x5ff7003n:
+						my_endpoint = (new endpoint.Endpoint()).setDomain(`i-hx-s${minor >> 16n}-${minor & 0xffffn}.u-relay.home.arpa`).setPort(my_cra.req.port);
+						break;
 					default:
-						my_endpoint = await user_hooks.handle_static_region(config, user_hook_state, {major: major, minor: minor}, ep_pre_lookup);
+						switch (major >> 16n) {
+							case 0x5fen:
+								my_endpoint = (new endpoint.Endpoint()).setDomain(`i-hx-${major & 0xffffn}-${minor}.u-relay.home.arpa`).setPort(my_cra.req.port);
+								break;
+							default:
+								my_endpoint = await user_hooks.handle_static_region(config, user_hook_state, {major: major, minor: minor}, ep_pre_lookup);
+								break;
+						}
 						break;
 				}
 			}
@@ -142,6 +153,7 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 	/* Resolve the domain name in the my_endpoint object, if it is a "domain" type */
 	await domain_canonicalizer(my_endpoint);
 	let no_resolve_dns = false;
+	let pre_resolve_result = null;
 	let special_result = my_endpoint.getSubdomainsOf(['arpa', 'home', 'u-relay'], 1);
 	if (special_result) {
 		no_resolve_dns = true;
@@ -154,14 +166,19 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 			} else {
 				throw new Error();
 			}
+		} else {
+			pre_resolve_result = domain_parser.apply_groupsub_map(gs_map, res_str, my_endpoint);
 		}
 	}
 	if (user_hooks.pre_resolve) {
-		let pre_resolve_result = await user_hooks.pre_resolve(config, user_hook_state, ep);
-		if (pre_resolve_result) {
-			my_cra.req = pre_resolve_result.craReq || ep.toCRAreq();
-			return pre_resolve_result.connFunc;
+		let pre_resolve_result2 = await user_hooks.pre_resolve(config, user_hook_state, ep);
+		if (pre_resolve_result2 || (pre_resolve_result2 === false)) {
+			pre_resolve_result = pre_resolve_result2;
 		}
+	}
+	if (pre_resolve_result) {
+		my_cra.req = pre_resolve_result.craReq || ep.toCRAreq();
+		return pre_resolve_result.connFunc;
 	}
 	let resolvedIPEndpoints = await my_endpoint.resolveDynamic(async (domain_parts, domain_name, ep) => {
 		let resolve_map_override = await user_hooks.resolve_map(config, user_hook_state, domain_name, ep) || resolve_map.get(domain_name);
