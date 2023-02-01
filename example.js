@@ -16,6 +16,7 @@ const ip_to_domain_static_map = new Map();
 const domain_ip_special = require('./example-static-map.json');
 const config = JSON.parse(process.argv[2] || '{}');
 const user_hooks = require('./user_hooks.js');
+(user_hooks.pre_init || ()=>0)(config, domain_ip_special);
 for (let e of domain_ip_special.relay_map) {
 	domain_to_ip_static_map.set(e[0], [false, e[1]]);
 	ip_to_domain_static_map.set(e[1], e[0]);
@@ -155,6 +156,13 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 			}
 		}
 	}
+	if (user_hooks.pre_resolve) {
+		let pre_resolve_result = await user_hooks.pre_resolve(config, user_hook_state, ep);
+		if (pre_resolve_result) {
+			my_cra.req = pre_resolve_result.craReq || ep.toCRAreq();
+			return pre_resolve_result.connFunc;
+		}
+	}
 	let resolvedIPEndpoints = await my_endpoint.resolveDynamic(async (domain_parts, domain_name, ep) => {
 		let resolve_map_override = await user_hooks.resolve_map(config, user_hook_state, domain_name, ep) || resolve_map.get(domain_name);
 		if (resolve_map_override) {
@@ -195,3 +203,4 @@ var transparent_server_obj = net.createServer({allowHalfOpen: true, pauseOnConne
 var socks_server_obj = net.createServer({allowHalfOpen: true, pauseOnConnect: true}, my_socks_server);
 if (config.transparent_fd !== false) transparent_server_obj.listen(config.transparent_fd || {fd: +process.env.CTRTOOL_NS_OPEN_FILE_FD_11});
 if (config.socks_fd !== false) socks_server_obj.listen(config.socks_fd || {fd: +process.env.CTRTOOL_NS_OPEN_FILE_FD_12});
+(user_hooks.post_init || ()=>0)(config);
