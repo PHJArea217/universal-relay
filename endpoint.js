@@ -301,3 +301,13 @@ exports.ofPrefix = function(prefix) {
 exports.ofDomain = function(domain__) {
 	return new Endpoint().setDomain2(domain__, false).getDomain();
 }
+exports.addressChomper = function(ipAddress, initialPosition) {
+	let _result = {value: ipAddress, position: initialPosition};
+	_result.setPosition = function(newPosition) {_result.position = newPosition;};
+	_result.chomp = function(nr_bits) {
+		if (nr_bits > _result.position) throw new Error("nr_bits beyond current position");
+		_result.position -= nr_bits;
+		return (_result.value >> _result.position) & ((1n << nr_bits) - 1n);
+	};
+	return _result;
+}

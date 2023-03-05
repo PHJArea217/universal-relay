@@ -16,7 +16,7 @@ const ip_to_domain_static_map = new Map();
 const domain_ip_special = require('./example-static-map.json');
 const config = JSON.parse(process.argv[2] || '{}');
 const user_hooks = require('./user_hooks.js');
-(user_hooks.pre_init || ()=>0)(config, domain_ip_special);
+(user_hooks.pre_init || (()=>0))(config, domain_ip_special);
 for (let e of domain_ip_special.relay_map) {
 	domain_to_ip_static_map.set(e[0], [false, e[1]]);
 	ip_to_domain_static_map.set(e[1], e[0]);
@@ -220,4 +220,4 @@ var transparent_server_obj = net.createServer({allowHalfOpen: true, pauseOnConne
 var socks_server_obj = net.createServer({allowHalfOpen: true, pauseOnConnect: true}, my_socks_server);
 if (config.transparent_fd !== false) transparent_server_obj.listen(config.transparent_fd || {fd: +process.env.CTRTOOL_NS_OPEN_FILE_FD_11});
 if (config.socks_fd !== false) socks_server_obj.listen(config.socks_fd || {fd: +process.env.CTRTOOL_NS_OPEN_FILE_FD_12});
-(user_hooks.post_init || ()=>0)(config);
+(user_hooks.post_init || (()=>0))(config);
