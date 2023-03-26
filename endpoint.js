@@ -117,6 +117,20 @@ class Endpoint {
 	setDomain (domain__) {
 		return this.setDomain2(domain__, true);
 	}
+	/*
+	 * getHostNR and friends operate on an IP address endpoint. The prefix and length
+	 * arguments represent an IPv6 CIDR prefix (IPv4 prefixes are represented under
+	 * ::ffff:0:0/96). The prefix argument is an IPv6 address in numerical form,
+	 * exactly as if returned by getIPBigInt(). The length argument is the CIDR prefix
+	 * length. If the IP address of the endpoint is within the specified prefix,
+	 * then the host bits of the endpoint's IP address is returned. For example, with
+	 * the endpoint IP address as 2001:db8::1234:aaa0, and the prefix and length is
+	 * 0x20010db8n<<96n and 64 (which corresponds to 2001:db8::/64), the return value is
+	 * 0x1234aaa0n. If the endpoint IP address does not fall under the specified prefix,
+	 * the return value is -1n for getHostNR. For getHostNRLex the return value is -1n
+	 * if the endpoint is numerically greater than the prefix, and -2n if the endpoint
+	 * is numerically less than the prefix.
+	 */
 	getHostNRLex (prefix, length) {
 		let bitmask = 128n - BigInt(length);
 		if ((bitmask < 0n) || (bitmask > 128n)) {
@@ -167,6 +181,22 @@ class Endpoint {
 		d.reverse();
 		return d.join('.');
 	}
+	/*
+	 * getSubdomainsOf and friends operate on a domain endpoint. The base_domain
+	 * argument represents a domain name, in backwards array form: an array of
+	 * DNS labels from right to left order. For example, the domain www.example.com
+	 * is represented as ['com', 'example', 'www']. This representation is roughly
+	 * the same as the HTTP Host header domain represented in Express.js's
+	 * req.subdomains property with the subdomain offset property set to 0. The
+	 * endpoint's domain name is checked to see if it is a subdomain of the
+	 * base_domain. If it is, then the return value is the subdomain portion of the
+	 * endpoint's domain name, expressed as an array of DNS labels, where the first
+	 * element is the first label directly below the matching base_domain. If the
+	 * endpoint's domain is the same as the base_domain, the return value is []. If
+	 * the endpoint's domain name is not a subdomain of the base_domain, then the
+	 * return value is null. The nr_parts_to_keep argument specifies the maximum
+	 * number of labels to return.
+	 */
 	getSubdomainsOfLex (base_domain, nr_parts_to_keep) {
 		if (!this.domain_) {
 			return null;
