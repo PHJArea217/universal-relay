@@ -118,6 +118,12 @@ class Endpoint {
 		return this.setDomain2(domain__, true);
 	}
 	/*
+	 * getHostNR and getSubdomainsOf take into account the general organization of IP
+	 * addresses and domain names. They operate under the assumption that the lower
+	 * components of a domain name or IP address are only meaningful if the upper
+	 * components match; if we don't recognize the upper components, then there would
+	 * not be any meaningful interpretation of the lower components.
+	 *
 	 * getHostNR and friends operate on an IP address endpoint. The prefix and length
 	 * arguments represent an IPv6 CIDR prefix (IPv4 prefixes are represented under
 	 * ::ffff:0:0/96). The prefix argument is an IPv6 address in numerical form,
