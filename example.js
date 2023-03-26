@@ -171,13 +171,13 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 		}
 	}
 	if (user_hooks.pre_resolve) {
-		let pre_resolve_result2 = await user_hooks.pre_resolve(config, user_hook_state, ep);
+		let pre_resolve_result2 = await user_hooks.pre_resolve(config, user_hook_state, my_endpoint);
 		if (pre_resolve_result2 || (pre_resolve_result2 === false)) {
 			pre_resolve_result = pre_resolve_result2;
 		}
 	}
 	if (pre_resolve_result) {
-		my_cra.req = pre_resolve_result.craReq || ep.toCRAreq();
+		my_cra.req = pre_resolve_result.craReq || my_endpoint.toCRAreq();
 		return pre_resolve_result.connFunc;
 	}
 	let resolvedIPEndpoints = await my_endpoint.resolveDynamic(async (domain_parts, domain_name, ep) => {
