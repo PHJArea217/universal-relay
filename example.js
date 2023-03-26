@@ -177,8 +177,13 @@ async function common_ip_rewrite(my_cra, my_socket, is_transparent) {
 		}
 	}
 	if (pre_resolve_result) {
-		my_cra.req = pre_resolve_result.craReq || my_endpoint.toCRAreq();
-		return pre_resolve_result.connFunc;
+		if (pre_resolve_result.connFunc) {
+			my_cra.req = pre_resolve_result.craReq || my_endpoint.toCRAreq();
+			return pre_resolve_result.connFunc;
+		} else {
+			/* domain or IP address changed, but not using alternative client function */
+			no_resolve_dns = false;
+		}
 	}
 	let resolvedIPEndpoints = await my_endpoint.resolveDynamic(async (domain_parts, domain_name, ep) => {
 		let resolve_map_override = await user_hooks.resolve_map(config, user_hook_state, domain_name, ep) || resolve_map.get(domain_name);

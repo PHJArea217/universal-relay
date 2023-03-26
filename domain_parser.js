@@ -108,7 +108,7 @@ function apply_groupsub(groupsub_data, string2, ep) {
 		groupsub_data.__cache__socks = cached_socks_server;
 		return {client: cached_socks_server};
 	}
-	return {client: null};
+	return {client: null}; /* change IP address or domain, but not upstream interface */
 }
 function apply_groupsub_map(gs_map, domain_part, ep) {
 	let groupsub_strings = extract_groupsub_strings(domain_part);
