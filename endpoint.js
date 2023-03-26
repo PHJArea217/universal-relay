@@ -48,8 +48,14 @@ class Endpoint {
 	getIPBigInt () {
 		return this.ip_;
 	}
-	getIPBuffer () {
-		let v4_host_nr = this.getHostNR(0xffff00000000n, 96);
+	getIPBuffer2 (force_v4mapped) {
+		/*
+		 * IPv4 addresses are stored as IPv4-mapped-IPv6 addresses under the
+		 * ::ffff:0:0/96 range. Retrieval of IPv4 addresses as a buffer or string
+		 * will return the IPv4 address itself, not the IPv4-mapped-IPv6
+		 * representation (unless forced with force_v4mapped = true)
+		 */
+		let v4_host_nr = force_v4mapped ? -1n : this.getHostNR(0xffff00000000n, 96);
 		if (v4_host_nr >= 0n) {
 			let newbuf = Buffer.allocUnsafe(4);
 			newbuf.writeUInt32BE(Number(v4_host_nr), 0);
@@ -63,8 +69,14 @@ class Endpoint {
 			return newbuf;
 		}
 	}
+	getIPBuffer () {
+		return this.getIPBuffer2(false);
+	}
+	getIPString2 (force_v4mapped) {
+		return ip.toString(this.getIPBuffer2(force_v4mapped));
+	}
 	getIPString () {
-		return ip.toString(this.getIPBuffer());
+		return this.getIPString2(false);
 	}
 	setDomain2 (domain__, convert_to_ip) {
 		let d = domain__;
@@ -232,7 +244,7 @@ class Endpoint {
 			};
 		}
 	}
-	toNCCOptions () {
+	toNCCOptions2 (force_v4mapped) {
 		let unix_path = this.options_map_.get('!unix_path');
 		if (unix_path) {
 			return {'path': unix_path};
@@ -244,7 +256,7 @@ class Endpoint {
 			if ((this.ip_ === 0n) || (this.ip_ === 0xffff00000000n)) {
 				throw new Error('IP address is 0.0.0.0 or ::');
 			} else {
-				result_object.host = this.getIPString();
+				result_object.host = this.getIPString2(force_v4mapped);
 				if (this.getHostNR(0xfe80n<<112n, 10) >= 0n) {
 					let scope_id = this.options_map_.get('!ipv6_scope');
 					if (scope_id) {
@@ -262,6 +274,9 @@ class Endpoint {
 			result_object.localAddress = localAddr;
 		}
 		return result_object;
+	}
+	toNCCOptions () {
+		return this.toNCCOptions2(false);
 	}
 	getHostNRThen (prefix, length, callback) {
 		let result = this.getHostNR(prefix, length);
