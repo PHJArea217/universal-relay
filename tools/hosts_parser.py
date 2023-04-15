@@ -19,7 +19,8 @@ with open(result.filename, 'r') as hosts_file:
                 host_ip_groupsub = f'i-hx-{result.string1}-{hex(int(host_ip) | 0xffff00000000)}.u-relay.home.arpa'
             else:
                 host_ip_groupsub = f'i-hx-{result.string1}-{hex(int(host_ip))}.u-relay.home.arpa'
-            for host in hosts_line[1:]:
+            for host_ in hosts_line[1:]:
+                host = host_.lower()
                 if host.endswith(result.suffix):
                     result_list.append([host, host_ip_groupsub])
 print(json.dumps(result_list))
