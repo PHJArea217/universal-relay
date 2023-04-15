@@ -27,6 +27,7 @@ for (let e of domain_ip_special.dns_map) {
 const hosts_map = new Map(domain_ip_special.hosts_map || []);
 const resolve_map = new Map(domain_ip_special.resolve_map || []);
 const gs_map = new Map(domain_ip_special.groupsub_map || []);
+const dc_map = new Map(domain_ip_special.dc_map || []);
 /* Set IP addresses of custom DNS servers. Universal Relay's fake_dns does not have a DNS cache, so it should be one that already has a cache, preferably a local server. */
 my_dns_resolver.setServers(config.dns || ['8.8.8.8']);
 
@@ -43,6 +44,8 @@ domain_to_ip_static_map.set("ipv4only.arpa", [true, [
 	{qtype: "URELAY-A6-SYNTH", content: null, a6_synth: "0x5ff6464c00000ab"}
 ]]);
 async function domain_canonicalizer(ep) {
+	let dc_map_result = dc_map.get(ep.getDomainString());
+	if (dc_map_result) ep.setDomain2(dc_map_result, false);
 	if (await user_hooks.domain_canonicalizer(config, ep)) return;
 	ep.getSubdomainsOfThen(['arpa', 'home', 'u-relay'], 1, (res, t) => {
 		if (res[0]) t.setDomain(['arpa', 'home', 'u-relay', res[0]]);
