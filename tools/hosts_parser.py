@@ -6,6 +6,7 @@ import argparse, shlex, json, ipaddress
 parser = argparse.ArgumentParser();
 parser.add_argument('filename');
 parser.add_argument('-s', '--string1', default='hosts')
+parser.add_argument('-x', '--suffix', default='')
 result = parser.parse_args();
 result_list = []
 with open(result.filename, 'r') as hosts_file:
@@ -19,5 +20,6 @@ with open(result.filename, 'r') as hosts_file:
             else:
                 host_ip_groupsub = f'i-hx-{result.string1}-{hex(int(host_ip))}.u-relay.home.arpa'
             for host in hosts_line[1:]:
-                result_list.append([host, host_ip_groupsub])
+                if host.endswith(result.suffix):
+                    result_list.append([host, host_ip_groupsub])
 print(json.dumps(result_list))
