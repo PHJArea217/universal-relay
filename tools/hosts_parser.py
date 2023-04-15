@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 # Convert a /etc/hosts file to dc_map format
+# Need ["hosts", {"ip_subst": "::/0"}] in groupsub_map
 import argparse, shlex, json, ipaddress
 parser = argparse.ArgumentParser();
 parser.add_argument('filename');
