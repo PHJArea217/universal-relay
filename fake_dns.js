@@ -1,6 +1,7 @@
 'use strict';
 const ip = require('ip');
 const fs = require('fs');
+const crypto = require('crypto');
 const endpoint = require('./endpoint.js');
 function make_fake_DNS_state(ip_generator) {
 	let result = {};
@@ -131,6 +132,8 @@ function make_urelay_ip_gen() {
 		if (fs.readSync(urandom_fd, randomBuf, 0, 5, 0) != 5) {
 			throw new Error();
 		}
+	} catch (e) {
+		crypto.getRandomValues(randomBuf);
 	} finally {
 		if (urandom_fd !== -1) fs.closeSync(urandom_fd);
 	}
