@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+cd /
+# Use Environment= in systemd unit file or env SOCKET_ENHANCER_CONFIG=[config] start_urelay_in_netns to set SOCKET_ENHANCER_CONFIG
+exec "$CTRTOOL" ns_open_file -o 9 -m -P "$1" -O rdonly -O nonblock -O noctty -s0,i \
+	-n -d inet -4 127.0.0.10,81,a -l4096 -i 0,n \
+	-n -6 ::ffff:127.0.0.20,80,at -l4096 -i 0,n \
+	-n -6 '::,1080,a' -l4096 -i0,n \
+	setpriv --reuid="$2" --regid="$3" --clear-groups \
+	env LD_PRELOAD=/usr/local/lib/socket-enhancer.so \
+	node /usr/local/lib/u-relay/example.js "$4"

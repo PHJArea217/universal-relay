@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+unshare -n sh -eu -c '
+ip link set lo up
+ip route add local "fedb:1200:4500:7800::/64" dev lo
+ip6tables-nft -t mangle -A PREROUTING -p tcp -d "fedb:1200:4500:7800::/64" -j TPROXY --on-ip "::ffff:127.0.0.20" --on-port 80
+:>"$1"
+mount --bind /proc/self/ns/net "$1"' _ "$1"
