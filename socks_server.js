@@ -23,7 +23,6 @@ async function socks_server(conn) {
 	let sendSuccess5auth = function() {
 		conn.write(new Buffer([5, 0]));
 	};
-	let excessBuf = [];
 	let phase = 0;
 	while (true) {
 		let nextBuf = await promises_lib.readFromSocket(conn);
@@ -202,7 +201,7 @@ async function socks_server(conn) {
 			}
 		}
 		if (phase === 1) {
-			info.excessBuf = nextBuf.slice(charsReadE);
+			conn.unshift(nextBuf.slice(charsReadE));
 			if (state === '4uc') {
 				info.sendOnAccept = new Buffer([0, 0x5a, 0, 0, 0, 0, 0, 0]);
 				info.sendOnReject = new Buffer([0, 0x5b, 0, 0, 0, 0, 0, 0]);

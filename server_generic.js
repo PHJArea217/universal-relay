@@ -32,9 +32,11 @@ function make_server(connReadPromise, ipRewrite, connPromise) {
 			if (connFunc === null) connFunc = connPromise;
 			let connOut = await connFunc(socket, connReadAttributes);
 			connOutSuccess = true;
+			/*
 			if (connReadAttributes.excessBuf) {
 				socket.unshift(connReadAttributes.excessBuf);
 			}
+			*/
 			if (connReadAttributes.sendOnAccept) {
 				socket.write(connReadAttributes.sendOnAccept);
 			}
