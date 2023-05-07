@@ -33,13 +33,19 @@ function make_server(connReadPromise, ipRewrite, connPromise) {
 			let connOut = await connFunc(socket, connReadAttributes);
 			connOutSuccess = true;
 			if (connReadAttributes.excessBuf) {
-				connOut.write(connReadAttributes.excessBuf);
+				socket.unshift(connReadAttributes.excessBuf);
 			}
 			if (connReadAttributes.sendOnAccept) {
 				socket.write(connReadAttributes.sendOnAccept);
 			}
 			if (connReadAttributes.sendOnAccept2) {
 				socket.write(connReadAttributes.sendOnAccept2);
+			}
+			if (connReadAttributes.socketAcceptor) {
+				/* Intended use case is to connect the incoming connection to some internal function such as an Express app, rather than an external host. connOut might be null. */
+				socket.resume();
+				connReadAttributes.socketAcceptor(socket);
+				return;
 			}
 			try {
 				connOut.setKeepAlive(true);
@@ -68,7 +74,7 @@ function make_server(connReadPromise, ipRewrite, connPromise) {
 			}
 			socket.end();
 			socket.destroy();
-//			console.log(e);
+			// console.log(e);
 		}
 	};
 }
