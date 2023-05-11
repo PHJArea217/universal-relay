@@ -286,6 +286,7 @@ class Endpoint {
 			return {'path': unix_path};
 		}
 		let result_object = {};
+		let bind_addr_key = null;
 		if (this.domain_) {
 			result_object.host = this.getDomainString();
 		} else {
@@ -302,10 +303,19 @@ class Endpoint {
 						}
 					}
 				}
+				if (this.getHostNR(0xffff00000000n, 96) >= 0n) {
+					if (force_v4mapped) {
+						bind_addr_key = '!bind_addr4m';
+					} else {
+						bind_addr_key = '!bind_addr4';
+					}
+				} else {
+					bind_addr_key = '!bind_addr6';
+				}
 			}
 		}
 		result_object.port = this.getPort();
-		let localAddr = this.options_map_.get('!bind_addr');
+		let localAddr = (bind_addr_key ? this.options_map_.get(bind_addr_key) : null) || this.options_map_.get('!bind_addr');
 		if (localAddr) {
 			result_object.localAddress = localAddr;
 		}

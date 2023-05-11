@@ -95,8 +95,10 @@ function apply_groupsub(groupsub_data, string2, ep) {
 	}
 	if (groupsub_data.domain_subst)
 		ep.setDomain(groupsub_data.domain_subst.replaceAll('#', string2));
-	if (groupsub_data.bind_addr) {
-		ep.options_map_.set('!bind_addr', groupsub_data.bind_addr);
+	for (let m of ['', '4', '4m', '6']) {
+		if (groupsub_data.hasOwnProperty('bind_addr' + m)) {
+			ep.options_map_.set('!bind_addr' + m, groupsub_data['bind_addr' + m]);
+		}
 	}
 	if (groupsub_data.ipv6_scope)
 		ep.options_map_.set('!ipv6_scope', groupsub_data.ipv6_scope);
