@@ -1,6 +1,7 @@
 'use strict';
 const net = require('net');
 const fake_dns = require('./fake_dns.js');
+const socks_server = require('./socks_server.js');
 function resolve_dns_dualstack(_domainName, dnsResolver, mode, overrideFunc) {
 	return new Promise((resolve, reject) => {
 		let domainNameX = String(_domainName);
@@ -64,7 +65,7 @@ function resolve_dns_dualstack(_domainName, dnsResolver, mode, overrideFunc) {
 			if (state.ipv6 !== null) {
 				nextStepAll();
 			} else {
-				setTimeout(nextStepAll, 1000);
+				setTimeout(nextStepAll, 2000);
 			}
 		});
 		dnsResolver.resolve6(domainName, (err, addresses) => {
@@ -76,13 +77,13 @@ function resolve_dns_dualstack(_domainName, dnsResolver, mode, overrideFunc) {
 			if (state.ipv4 !== null) {
 				nextStepAll();
 			} else {
-				setTimeout(nextStepAll, 1000);
+				setTimeout(nextStepAll, 2000);
 			}
 		});
 		setTimeout(nextStepAll, 10000);
 	});
 }
-function connect_HE(req_array, connFunc, addOnAbort) {
+function connect_HE(req_array, connFunc, addOnAbort, origCRA) {
 	return new Promise((resolve, reject) => {
 		if (req_array.length === 0) reject();
 		let state = {connectionsLeft: req_array.length, done: false};
@@ -99,7 +100,8 @@ function connect_HE(req_array, connFunc, addOnAbort) {
 		let tryNewConnection = () => {
 			if (state.done) return;
 			if (req_array.length === 0) return;
-			let conn = connFunc(req_array[0]);
+			let current_req = req_array[0];
+			let conn = ((current_req.hasOwnProperty("__orig_endpoint__") ? current_req.__orig_endpoint__.options_map_.get("!connFunc") : null) || connFunc)(current_req);
 			req_array.shift();
 			pendingConnections.push(conn);
 			let onFailureCalled = false;
@@ -110,6 +112,7 @@ function connect_HE(req_array, connFunc, addOnAbort) {
 				for (let c of pendingConnections) {
 					if ((c !== conn) && (c.abort !== null)) c.abort();
 				}
+				if (current_req.sendOnAccept2 && origCRA) origCRA.sendOnAccept2 = current_req.sendOnAccept2;
 				conn.result.pause();
 				resolve(conn.result);
 			});
@@ -173,14 +176,35 @@ function connFuncDirect(reqAttr) {
 		}
 	};
 }
+function connFuncSocks(reqAttr) {
+	let socksPromise = socks_server.make_socks_client(reqAttr.__orig_endpoint__.options_map_.get("!socks_server"));
+	let state = {success: null, failure: null};
+	let result = {
+		result: null,
+		onSuccess: ((func) => state.success = func),
+		onFailure: ((func) => state.failure = func),
+		abort: (()=>0)
+	};
+	process.nextTick(() => {
+		reqAttr.req = reqAttr; /* hacky but we need the reqAttr to be under .req AND we need to collect .sendOnAccept2 */
+		socksPromise(null, reqAttr).then((result_) => {
+			result.result = result_;
+			state.success();
+		}).catch(() => {
+			state.failure();
+		});
+	});
+	return result;
+}
 
 async function simple_connect_HE(socket, connReadAttributes) {
 	let addOnAbort = (f) => socket.on('close', f);
 	let req_array = Array.isArray(connReadAttributes.req) ? connReadAttributes.req : [connReadAttributes.req];
-	return await connect_HE(req_array, connFuncDirect, addOnAbort);
+	return await connect_HE(req_array, connFuncDirect, addOnAbort, connReadAttributes);
 }
 exports.resolve_dns_dualstack = resolve_dns_dualstack;
 exports.connect_HE = connect_HE;
 exports.makeIPRewriteDNS = makeIPRewriteDNS;
 exports.connFuncDirect = connFuncDirect;
+exports.connFuncSocks = connFuncSocks;
 exports.simple_connect_HE = simple_connect_HE;
