@@ -183,7 +183,11 @@ function connFuncSocks(reqAttr) {
 		result: null,
 		onSuccess: ((func) => state.success = func),
 		onFailure: ((func) => state.failure = func),
-		abort: (()=>0)
+		abort: () => {
+			if (reqAttr.hasOwnProperty("_conn")) {
+				reqAttr._conn.destroy();
+			}
+		}
 	};
 	process.nextTick(() => {
 		reqAttr.req = reqAttr; /* hacky but we need the reqAttr to be under .req AND we need to collect .sendOnAccept2 */

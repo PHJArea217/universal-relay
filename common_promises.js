@@ -42,6 +42,7 @@ function readFromSocket(socket) {
 function socketConnect(options, destroyOnClose) {
 	return new Promise((resolve, reject) => {
 		let conn = net.createConnection(options);
+		options._conn = conn;
 		let done = false;
 		conn.once('connect', () => {
 			if (done) return;
