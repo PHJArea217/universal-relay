@@ -2,6 +2,7 @@
 const ip = require('ip');
 const fs = require('fs');
 const crypto = require('crypto');
+const express = require('express');
 const endpoint = require('./endpoint.js');
 function make_fake_DNS_state(ip_generator) {
 	let result = {};
@@ -174,15 +175,12 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 	_result.make_pdns_express_app = function(app, dof_arg_1, static_only) {
 		let dof_arg = dof_arg_1;
 		let staticOnly = static_only;
-		app.use('/__pdns__/lookup', async function (req, res) {
-			let req_path_parts = String(req.path).split('/');
-			if ((req_path_parts.length !== 3) || (req_path_parts[0] !== '')) {
-				res.send(400);
-				return;
-			}
+		app.use(express.urlencoded());
+		app.post('/__pdns__/lookup', async function (req, res) {
+			let input = JSON.parse(req.body.parameters);
+			let qname = String(input.qname).toLowerCase();
+			let qtype = String(input.qtype).toUpperCase();
 			let result = [];
-			let qname = decodeURIComponent(req_path_parts[1]).toLowerCase();
-			let qtype = req_path_parts[2].toUpperCase();
 			if ((qname === '.') && !_result.options.rootIsNotSpecial) {
 				if ((qtype === 'SOA') || (qtype === 'ANY')) {
 					result.push({qname: '.', qtype: 'SOA', ttl: 120, content: 'dns-root.u-relay.home.arpa. u-relay.peterjin.org. 1 1000 1000 1000 120'});
@@ -195,6 +193,7 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 				let do_aaaa = true;
 				let do_dummy_hinfo = true;
 				try {
+					if (qname.length > 255) throw new Error();
 					domain_labels.setDomain2(qname, false);
 				} catch (e) {
 					res.send(200, {result: []});
@@ -273,18 +272,15 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 			res.send(200, {result: result});
 		});
 		let common_function = async function (req, res, num) {
-			let req_path_parts = String(req.path).split('/');
-			if ((req_path_parts.length !== 2) || (req_path_parts[0] !== '')) {
-				res.send(400);
-				return;
-			}
+			let input = JSON.parse(req.body.parameters);
+			let qname = String(input.name).toLowerCase();
 			let result = [];
-			let qname = decodeURIComponent(req_path_parts[1]).toLowerCase();
 			if ((qname === '.') && !_result.options.rootIsNotSpecial) {
 				res.send(200, {result: {"PRESIGNED": ["0"]}});
 			} else {
 				let domain_labels = new endpoint.Endpoint();
 				try {
+					if (qname.length > 255) throw new Error();
 					domain_labels.setDomain2(qname, false);
 				} catch (e) {
 					res.send(200, {result: {}});
@@ -294,11 +290,11 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 				res.send(200, {result: overrideResult});
 			}
 		};
-		app.use('/__pdns__/getalldomainmetadata', (req, res) => common_function(req, res, 2));
-		app.use('/__pdns__/getAllDomainMetadata', (req, res) => common_function(req, res, 2));
+		app.post('/__pdns__/getalldomainmetadata', (req, res) => common_function(req, res, 2));
+		app.post('/__pdns__/getAllDomainMetadata', (req, res) => common_function(req, res, 2));
 		let get_all_domains_func = (req, res) => res.send(200, {result: _result.options.domainList || [{id: 1, zone: ".", kind: "native"}]});
-		app.use('/__pdns__/getAllDomains', get_all_domains_func);
-		app.use('/__pdns__/getalldomains', get_all_domains_func);
+		app.post('/__pdns__/getAllDomains', get_all_domains_func);
+		app.post('/__pdns__/getalldomains', get_all_domains_func);
 		app.use('/dump_data', function (req, res) {
 			let result = [];
 			for (let entry of _result.map_state.byIP) {
