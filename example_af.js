@@ -1,3 +1,7 @@
+'use strict';
+/* To encourage modification of this file by end users, this file is public
+ * domain and may be used and distributed without restriction. The LICENSE file
+ * is not required to distribute, use, or modify this file. */
 const app_func = require('./app_func.js');
 const dns_he = require('./dns_he.js');
 const endpoint = require('./endpoint.js');
