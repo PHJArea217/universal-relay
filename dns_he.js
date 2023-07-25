@@ -83,6 +83,11 @@ function resolve_dns_dualstack(_domainName, dnsResolver, mode, overrideFunc) {
 		setTimeout(nextStepAll, 10000);
 	});
 }
+function make_endpoint_resolver(dnsResolver, mode, overrideFunc) {
+	return async function (domain_labels, domain_name, ep) {
+		return await resolve_dns_dualstack(domain_name, dnsResolver, mode, overrideFunc);
+	};
+}
 function connect_HE(req_array, connFunc, addOnAbort, origCRA) {
 	return new Promise((resolve, reject) => {
 		if (req_array.length === 0) reject();
@@ -207,6 +212,7 @@ async function simple_connect_HE(socket, connReadAttributes) {
 	return await connect_HE(req_array, connFuncDirect, addOnAbort, connReadAttributes);
 }
 exports.resolve_dns_dualstack = resolve_dns_dualstack;
+exports.make_endpoint_resolver = make_endpoint_resolver;
 exports.connect_HE = connect_HE;
 exports.makeIPRewriteDNS = makeIPRewriteDNS;
 exports.connFuncDirect = connFuncDirect;

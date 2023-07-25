@@ -2,6 +2,7 @@
 // const fake_dns = require('./fake_dns.js');
 const net = require('net');
 const socks_server = require('./socks_server.js');
+const dns_he = require('./dns_he.js');
 const endpoint = require('./endpoint.js');
 function extractSubdomains(domain, suffix) {
 	if (domain.length < suffix.length) return null;
@@ -67,7 +68,12 @@ function urelay_handle_special_domain(domain_parts, domainName_unused) {
 }
 function urelay_dns_override(domain_parts) {
 	if (extractSubdomains(domain_parts, ['local'])) return []; /* *.local (mDNS) */
-	if (extractSubdomains(domain_parts, ['arpa', 'ipv4only'])) return []; /* ipv4only.arpa */
+	if (extractSubdomains(domain_parts, ['arpa', 'ipv4only'])) return [
+		{qtype: "A", content: "192.0.0.170"},
+		{qtype: "A", content: "192.0.0.171"},
+		{qtype: "URELAY-A6-SYNTH", content: null, a6_synth: "0x5ff6464c00000aa"},
+		{qtype: "URELAY-A6-SYNTH", content: null, a6_synth: "0x5ff6464c00000ab"}
+	]; /* ipv4only.arpa */
 	if (extractSubdomains(domain_parts, ['arpa', 'in-addr'])) return []; /* in-addr.arpa */
 	if (extractSubdomains(domain_parts, ['arpa', 'ip6'])) return []; /* ip6.arpa TODO: generate PTR records for primary ip->domain map */
 	if (extractSubdomains(domain_parts, ['net', 'use-application-dns'])) return []; /* use-application-dns.net */
@@ -102,6 +108,10 @@ function apply_groupsub(groupsub_data, string2, ep) {
 	}
 	if (groupsub_data.ipv6_scope)
 		ep.options_map_.set('!ipv6_scope', groupsub_data.ipv6_scope);
+	if (groupsub_data.socks_server) {
+		ep.options_map_.set('!socks_server', groupsub_data.socks_server);
+		ep.options_map_.set('!connFunc', dns_he.connFuncSocks);
+	}
 	if (groupsub_data.__cache__socks) {
 		return {client: groupsub_data.__cache_socks};
 	}
