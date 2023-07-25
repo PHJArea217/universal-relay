@@ -10,7 +10,7 @@ class TransparentHandler {
 		if (config.static_maps) {
 			this.relay_bidir_map = config.static_maps.relay_bidir_map || dns_helpers.make_bidir_map(config.static_maps.relay_map || [], {entry1_transform: x => BigInt(x)});
 			this.dns_map = new Map(config.static_maps.dns_map || []);
-			this.groupsub_map = new Map(config.static_maps.gs_map || []);
+			this.groupsub_map = new Map(config.static_maps.groupsub_map || []);
 		} else {
 			this.relay_bidir_map = null;
 			this.dns_map = new Map();
@@ -109,7 +109,7 @@ class TransparentHandler {
 	}
 	special_domain_resolve(sd_part, ep) {
 		let sdp = domain_parser.urelay_handle_special_domain_part(sd_part, Object.hasOwn(this.config, 'allow_linklocal') ? this.config.allow_linklocal : true);
-		if (sdp[0]) return (ep ? ep.clone() : new endpoint.Endpoint()).setIPStringWithScope(sdp[0]);
+		if (sdp && sdp[0]) return (ep ? ep.clone() : new endpoint.Endpoint()).setIPStringWithScope(sdp[0]);
 		let ep2 = ep.clone();
 		let a = domain_parser.apply_groupsub_map(this.groupsub_map, sd_part, ep2);
 		if (a) return ep2;
