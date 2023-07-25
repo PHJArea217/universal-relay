@@ -46,7 +46,7 @@ class TransparentHandler {
 			}
 		}
 		if (!this.config.disable_rdns) {
-			let ip6_arpa_result = ep.getSubdomainsOf(['ip6', 'arpa'], 33);
+			let ip6_arpa_result = ep.getSubdomainsOf(['arpa', 'ip6'], 33);
 			if (ip6_arpa_result) {
 				let ip_parsed = dns_helpers.handle_ip6_arpa(ip6_arpa_result);
 				if (ip_parsed >= 0n) {
@@ -86,7 +86,7 @@ class TransparentHandler {
 				let l = c.chomp(32n);
 				return e.setDomain2(`i-hx-{h}-{l}.{special_domain}`, false);
 			case 0x5ffn:
-				case (c.chomp(16n)) {
+				switch (c.chomp(16n)) {
 					case 0x7001n:
 						if (this.relay_bidir_map) {
 							let rm_result = this.relay_bidir_map.transform_reverse(c.chomp(32n));
@@ -103,7 +103,7 @@ class TransparentHandler {
 				break;
 		}
 		let s = [false];
-		let d = ip_domain_map.query_ip(iid, s, 2);
+		let d = this.ip_domain_map.query_ip(iid, s, 2);
 		if (s[0]) return e.setDomain2(d, false);
 		return null;
 	}
@@ -116,3 +116,4 @@ class TransparentHandler {
 		return null;
 	}
 }
+exports.TransparentHandler = TransparentHandler;
