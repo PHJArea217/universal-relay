@@ -5,5 +5,6 @@ exports.make_skbox_ec_server = function(socketPath, ncsObj) {
 	} catch (e) {
 	}
 	ncsObj.listen({path: socketPath}, () => fs.chmodSync(socketPath,438 /*0666*/));
+	return ncsObj;
 }
 

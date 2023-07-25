@@ -1,0 +1,10 @@
+fe8f::3:10:0 socks.u-relay.home.arpa
+fe8f::3:10:1 acme-v02.api.letsencrypt.org
+fe8f::3:10:2 r3.o.lencr.org
+fe8f::3:10:3 e1.o.lencr.org
+fe8f::3:10:4 website.peterjin.org
+fe8f::3:10:5 github.com
+fe8f::3:10:6 api.github.com
+fe8f::3:10:7 acme-staging-v02.api.letsencrypt.org
+fe8f::3:10:8 matrix-b.srv.peterjin.org
+fe8f::3:10:9 registry.npmjs.org
