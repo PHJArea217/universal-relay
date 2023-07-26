@@ -76,12 +76,14 @@ var ss = server_generic.make_server(socks_server.socks_server, async (e, s) => {
 	e.req = await common_at_domain(ep);
 	return null;
 }, dns_he.simple_connect_HE);
-app.expressApp.listen({fd: +process.env.CTRTOOL_NS_OPEN_FILE_FD_10});
 let ts_obj = net.createServer({allowHalfOpen: true, pauseOnConnect: true}, ts);
 let ss_obj = net.createServer({allowHalfOpen: true, pauseOnConnect: true}, ss);
 let ss_obj2 = net.createServer({allowHalfOpen: true, pauseOnConnect: true}, ss);
-ts_obj.listen({fd: +process.env.CTRTOOL_NS_OPEN_FILE_FD_11});
-ss_obj.listen({fd: +process.env.CTRTOOL_NS_OPEN_FILE_FD_12});
+if (Object.hasOwn(process.env, 'CTRTOOL_NS_OPEN_FILE_FD_10')) {
+	app.expressApp.listen({fd: +process.env.CTRTOOL_NS_OPEN_FILE_FD_10});
+	ts_obj.listen({fd: +process.env.CTRTOOL_NS_OPEN_FILE_FD_11});
+	ss_obj.listen({fd: +process.env.CTRTOOL_NS_OPEN_FILE_FD_12});
+}
 let my_socket_root = process.env.URELAY_SKBOX_EC_ROOT || '/run/socketbox/00016';
 function skbox_ec_make_server(ep) {
 	let cb = server_generic.make_server(transparent_server.transparent_server, async (e, s) => {
