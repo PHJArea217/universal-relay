@@ -278,10 +278,10 @@ function dns_sort(endpoints, options) {
 	}
 	switch (mode) {
 		case '4_weak':
-			while(add_from(available_ipv4, limit4) && add_from(available_ipv6, limit6)) {}
+			while(add_from(available_ipv4, limit4) | add_from(available_ipv6, limit6)) {}
 			break;
 		case '6_weak':
-			while(add_from(available_ipv4, limit4) && add_from(available_ipv6, limit6)) {}
+			while(add_from(available_ipv6, limit6) | add_from(available_ipv4, limit4)) {}
 			break;
 		case '4_strong':
 			while (add_from(available_ipv4, limit4)) {}
