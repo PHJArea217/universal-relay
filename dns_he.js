@@ -232,6 +232,74 @@ async function simple_connect_HE(socket, connReadAttributes) {
 	let req_array = Array.isArray(connReadAttributes.req) ? connReadAttributes.req : [connReadAttributes.req];
 	return await connect_HE(req_array, connFuncDirect, addOnAbort, connReadAttributes);
 }
+function dns_sort(endpoints, options) {
+	options = options || {};
+	let max_ipv4 = Object.hasOwn(options, 'max_ipv4') ? options.max_ipv4 : 3;
+	let max_ipv6 = Object.hasOwn(options, 'max_ipv6') ? options.max_ipv6 : 3;
+	let max_all = Object.hasOwn(options, 'max_all') ? options.max_all : 5;
+	let mode = Object.hasOwn(options, 'mode') ? options.mode : '6_weak';
+	let available_ipv4 = [];
+	let available_ipv6 = [];
+	for (const e of endpoints) {
+		let ip_type = e.options_map_.get('!ip_type');
+		let which_array = null;
+		switch (ip_type) {
+			case 4:
+				which_array = available_ipv4;
+				break;
+			case 6:
+				which_array = available_ipv6;
+				break;
+			default:
+				which_array = ((e.getIPBigInt() >> 32n) == 0xffffn) ? available_ipv4 : available_ipv6;
+				break;
+		}
+		which_array.push(e);
+	}
+	let result = [];
+	let limit4 = {cur: 0, max: max_ipv4};
+	let limit6 = {cur: 0, max: max_ipv6};
+	let limit_all = {cur: 0, max: max_ipv6};
+	function add_from(which_array, limit) {
+		if (which_array.length < 1) return false;
+		let idx = Math.floor(Math.random() * which_array.length);
+		let em = which_array[idx];
+		if (!em) throw new Error();
+		if (limit.cur >= limit.max) return false;
+		if (limit_all.cur >= limit_all.max) return false;
+		limit.cur++;
+		limit_all.cur++;
+		result.push(em);
+		let removed_element = which_array.pop();
+		if (idx < which_array.length) {
+			which_array[idx] = removed_element;
+		}
+		return true;
+	}
+	switch (mode) {
+		case '4_weak':
+			while(add_from(available_ipv4, limit4) && add_from(available_ipv6, limit6)) {}
+			break;
+		case '6_weak':
+			while(add_from(available_ipv4, limit4) && add_from(available_ipv6, limit6)) {}
+			break;
+		case '4_strong':
+			while (add_from(available_ipv4, limit4)) {}
+			while (add_from(available_ipv6, limit6)) {}
+			break;
+		case '6_strong':
+			while (add_from(available_ipv6, limit6)) {}
+			while (add_from(available_ipv4, limit4)) {}
+			break;
+		case '4_only':
+			while (add_from(available_ipv4, limit4)) {}
+			break;
+		case '6_only':
+			while (add_from(available_ipv6, limit6)) {}
+			break;
+	}
+	return result;
+}
 exports.resolve_dns_dualstack = resolve_dns_dualstack;
 exports.make_endpoint_resolver = make_endpoint_resolver;
 exports.connect_HE = connect_HE;
@@ -239,3 +307,4 @@ exports.makeIPRewriteDNS = makeIPRewriteDNS;
 exports.connFuncDirect = connFuncDirect;
 exports.connFuncSocks = connFuncSocks;
 exports.simple_connect_HE = simple_connect_HE;
+exports.dns_sort = dns_sort;
