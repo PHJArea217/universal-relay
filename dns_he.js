@@ -259,7 +259,7 @@ function dns_sort(endpoints, options) {
 	let result = [];
 	let limit4 = {cur: 0, max: max_ipv4};
 	let limit6 = {cur: 0, max: max_ipv6};
-	let limit_all = {cur: 0, max: max_ipv6};
+	let limit_all = {cur: 0, max: max_all};
 	function add_from(which_array, limit) {
 		if (which_array.length < 1) return false;
 		let idx = Math.floor(Math.random() * which_array.length);
