@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import argparse, json, ipaddress, sys, shlex
+import argparse, json, ipaddress, sys, shlex, re
 parser = argparse.ArgumentParser()
 parser.add_argument('filename', nargs='*');
 parser.add_argument('-l', '--list-file', nargs='*', default=[]);
@@ -9,6 +9,9 @@ parser.add_argument('-c', '--combine', action='store_true');
 parser.add_argument('-L', '--make-list', action='store_true');
 parser.add_argument('-o', '--offset', default='0');
 parser.add_argument('-O', '--offset-limit', default='4294967296');
+parser.add_argument('-t', '--relay-map-to-hosts', action='store_true')
+parser.add_argument('-p', '--ipv6-prefix', default='0xfedb120045007800')
+parser.add_argument('-f', '--format', default='hosts')
 args = parser.parse_args()
 if args.build_relay_map:
     domains = []
@@ -77,3 +80,18 @@ if args.make_list:
         for e in file_json:
             print(str(e))
     sys.exit(0)
+if args.relay_map_to_hosts:
+    ipv6_prefix = int(args.ipv6_prefix, base=0) << 64
+    file_json = json.load(open(args.filename[0], 'r'))
+    filter_ = re.compile(r'^[a-z0-9_.-]*$')
+    for e in file_json['relay_map']:
+        if filter_.match(e[0]) != None:
+            my_ip = ipaddress.IPv6Address(ipv6_prefix | 0x5ff700100000000 | (e[1] & 0xffffffff))
+            if args.format == 'bind':
+                print(e[0] + '. IN AAAA ' + str(my_ip))
+            elif args.format == 'dnsmasq':
+                print(f"""address=/{e[0]}/{my_ip}""")
+            else: # --format hosts is the default
+                print(str(my_ip) + ' ' + e[0])
+    sys.exit(0)
+# domain
