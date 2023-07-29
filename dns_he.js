@@ -240,6 +240,7 @@ function dns_sort(endpoints, options) {
 	let mode = Object.hasOwn(options, 'mode') ? options.mode : '6_weak';
 	let available_ipv4 = [];
 	let available_ipv6 = [];
+	let available_keys = new Map();
 	for (const e of endpoints) {
 		let ip_type = e.options_map_.get('!ip_type');
 		let which_array = null;
@@ -265,6 +266,11 @@ function dns_sort(endpoints, options) {
 		let idx = Math.floor(Math.random() * which_array.length);
 		let em = which_array[idx];
 		if (!em) throw new Error();
+		let key = em.options_map_.has('!ip_key') ? em.options_map_.get('!ip_key') : em.getIPBigInt();
+		if (key !== null) {
+			if (available_keys.has(key)) return false;
+			available_keys.set(key, 1);
+		}
 		if (limit.cur >= limit.max) return false;
 		if (limit_all.cur >= limit_all.max) return false;
 		limit.cur++;
