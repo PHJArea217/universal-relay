@@ -11,6 +11,7 @@ parser.add_argument('-o', '--offset', default='0');
 parser.add_argument('-O', '--offset-limit', default='4294967296');
 parser.add_argument('-t', '--relay-map-to-hosts', action='store_true')
 parser.add_argument('-p', '--ipv6-prefix', default='0xfedb120045007800')
+parser.add_argument('-4', '--ipv4-start', default='198.18.0.0')
 parser.add_argument('-f', '--format', default='hosts')
 args = parser.parse_args()
 if args.build_relay_map:
@@ -82,16 +83,30 @@ if args.make_list:
     sys.exit(0)
 if args.relay_map_to_hosts:
     ipv6_prefix = int(args.ipv6_prefix, base=0) << 64
+    ipv4_start = int(ipaddress.IPv4Address(args.ipv4_start))
+    ipv4_offset = int(args.offset)
+    ipv4_offset_limit = int(args.offset_limit)
     file_json = json.load(open(args.filename[0], 'r'))
     filter_ = re.compile(r'^[a-z0-9_.-]*$')
     for e in file_json['relay_map']:
         if filter_.match(e[0]) != None:
             my_ip = ipaddress.IPv6Address(ipv6_prefix | 0x5ff700100000000 | (e[1] & 0xffffffff))
+            my_ipv4 = None
+            if ipv4_offset_limit < 4294967296:
+                normal_ipv4 = (e[1] & 0xffffffff) - ipv4_offset
+                if normal_ipv4 >= 0 and normal_ipv4 < ipv4_offset_limit:
+                    my_ipv4 = ipaddress.IPv4Address(ipv4_start + normal_ipv4)
             if args.format == 'bind':
                 print(e[0] + '. IN AAAA ' + str(my_ip))
+                if my_ipv4 != None:
+                    print(e[0] + '. IN A ' + str(my_ipv4))
             elif args.format == 'dnsmasq':
+                if my_ipv4 != None:
+                    print(f"""address=/{e[0]}/{my_ipv4}""")
                 print(f"""address=/{e[0]}/{my_ip}""")
             else: # --format hosts is the default
+                if my_ipv4 != None:
+                    print(str(my_ipv4) + ' ' + e[0])
                 print(str(my_ip) + ' ' + e[0])
     sys.exit(0)
 # domain
