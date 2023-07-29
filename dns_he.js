@@ -255,6 +255,11 @@ function dns_sort(endpoints, options) {
 				which_array = ((e.getIPBigInt() >> 32n) == 0xffffn) ? available_ipv4 : available_ipv6;
 				break;
 		}
+		let key = e.options_map_.has('!ip_key') ? e.options_map_.get('!ip_key') : e.getIPBigInt();
+		if (key !== null) {
+			if (available_keys.has(key)) continue;
+			available_keys.set(key, 1);
+		}
 		which_array.push(e);
 	}
 	let result = [];
@@ -266,11 +271,6 @@ function dns_sort(endpoints, options) {
 		let idx = Math.floor(Math.random() * which_array.length);
 		let em = which_array[idx];
 		if (!em) throw new Error();
-		let key = em.options_map_.has('!ip_key') ? em.options_map_.get('!ip_key') : em.getIPBigInt();
-		if (key !== null) {
-			if (available_keys.has(key)) return false;
-			available_keys.set(key, 1);
-		}
 		if (limit.cur >= limit.max) return false;
 		if (limit_all.cur >= limit_all.max) return false;
 		limit.cur++;
