@@ -181,6 +181,27 @@ function connFuncDirect(reqAttr) {
 		}
 	};
 }
+function connFuncDirectTLS(reqAttr) {
+	if (reqAttr.__orig_endpoint__) {
+		let o = reqAttr.__orig_endpoint__.options_map_.get('!tls_options');
+		if (o) {
+			if (!Object.hasOwn(o, "port")) {
+				o = {...o};
+				Object.assign(o, reqAttr.__orig_endpoint__.toNCCOptions());
+			}
+			let s = tls.connect(o);
+			return {
+				result: s,
+				onSuccess: (func) => s.once('secureConnect', func),
+				onFailure: (func) => s.once('error', func),
+				abort: () => {
+					s.destroy();
+				}
+			};
+		}
+	}
+	throw new Error("!tls_options not found in reqAttr.__orig_endpoint__");
+}
 function connFuncSocks(reqAttr) {
 	let socksPromise = socks_server.make_socks_client(reqAttr.__orig_endpoint__.options_map_.get("!socks_server"));
 	let state = {success: null, failure: null};

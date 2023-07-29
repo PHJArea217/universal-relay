@@ -84,7 +84,7 @@ function extract_groupsub_strings(domain_part) {
 	return String(domain_part).match(/^i-hx-([^-]+)-(.*)$/);
 }
 function apply_groupsub(groupsub_data, string2, ep) {
-	if (groupsub_data.ip_subst) {
+	if (groupsub_data.ip_subst && (groupsub_data.domain_subst ? string2.match(/^[0-9]/) : true)) {
 		let groupsub_prefix = groupsub_data.__cache__prefix || endpoint.ofPrefix(groupsub_data.ip_subst);
 		groupsub_data.__cache__prefix = groupsub_prefix;
 		let groupsub_prefix_limit = 1n << (128n - groupsub_prefix[1]);
@@ -99,7 +99,7 @@ function apply_groupsub(groupsub_data, string2, ep) {
 		}
 		if (ip_val >= 0n) ep.setIPBigInt(ip_val);
 	}
-	if (groupsub_data.domain_subst)
+	else if (groupsub_data.domain_subst)
 		ep.setDomain(groupsub_data.domain_subst.replaceAll('#', string2));
 	for (let m of ['', '4', '4m', '6']) {
 		if (groupsub_data.hasOwnProperty('bind_addr' + m)) {

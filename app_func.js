@@ -89,8 +89,8 @@ class TransparentHandler {
 				switch (c.chomp(16n)) {
 					case 0x7001n:
 						if (this.relay_bidir_map) {
-							let rm_result = this.relay_bidir_map.transform_reverse(c.chomp(32n));
-							return rm_result ? e.setDomain2(rm_result[0], false) : null;
+							let rm_result = this.relay_bidir_map.translate_reverse(c.chomp(32n));
+							return rm_result ? e.setDomain2(rm_result[0], true) : null;
 						}
 						break;
 					case 0x7003n:
@@ -104,7 +104,7 @@ class TransparentHandler {
 		}
 		let s = [false];
 		let d = this.ip_domain_map.query_ip(iid, s, 2);
-		if (s[0]) return e.setDomain2(d, false);
+		if (s[0]) return e.setDomain2(d, true);
 		return null;
 	}
 	special_domain_resolve(sd_part, ep) {

@@ -39,12 +39,13 @@ const server_generic = require('./server_generic.js');
 const transparent_server = require('./transparent_server.js');
 const socks_server = require('./socks_server.js');
 const skbox_ec = require('./skbox_ec.js');
+const mdns = require('./mdns.js');
 const app = new app_func.TransparentHandler({static_maps: example_sm, prefix: 0xfedb120045007800n});
 const dns = require('dns');
 const net = require('net');
 var my_dns = new dns.Resolver();
 my_dns.setServers(['8.8.8.8']);
-var my_dns_resolver = dns_he.make_endpoint_resolver(my_dns, '6_weak', null);
+var my_dns_resolver = (d, h, ep) => mdns.systemd_resolve(h, null, true, ep); // mdns.make_libc_endpoint_resolver({all: true}); // dns_he.make_endpoint_resolver(my_dns, '6_weak', null);
 async function common_at_domain(ep) {
 	let sd_domain = ep.getSubdomainsOf(['arpa', 'home', 'u-relay'], 1);
 	if (sd_domain && sd_domain[0]) {

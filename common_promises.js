@@ -42,7 +42,9 @@ function readFromSocket(socket) {
 function socketConnect(options, destroyOnClose) {
 	return new Promise((resolve, reject) => {
 		let conn = net.createConnection(options);
-		options._conn = conn;
+		if (Object.hasOwn(options, "port") || Object.hasOwn(options, "path")) {
+			options._conn = conn;
+		}
 		let done = false;
 		conn.once('connect', () => {
 			if (done) return;

@@ -1,4 +1,6 @@
 const common_promises = require('./common_promises.js');
+const dns = require('dns');
+const util = require('util');
 /* The implementations here were reverse engineered by strace-ing :) */
 async function mdns_resolve(hostname, simplePath, allow_linklocal_scope, orig_endpoint) {
 	let simpleConn = await common_promises.socketConnect(simplePath || '/run/avahi-daemon/socket', null);
@@ -56,5 +58,18 @@ async function systemd_resolve(hostname, simplePath, allow_linklocal_scope, orig
 	}
 	throw new Error(`systemd_resolve: failed to resolve ${hostname}`);
 }
+const libc_resolve = util.promisify(dns.lookup);
+function make_libc_endpoint_resolver(options) {
+	return async function(d, ds, ep) {
+		try {
+			let result = await libc_resolve(ds, options);
+			if (Array.isArray(result)) return result.map(a => a.address);
+		} catch (e) {
+		}
+		return [];
+	};
+}
+exports.libc_resolve = libc_resolve;
+exports.make_libc_endpoint_resolver = make_libc_endpoint_resolver;
 exports.mdns_resolve = mdns_resolve;
 exports.systemd_resolve = systemd_resolve;
