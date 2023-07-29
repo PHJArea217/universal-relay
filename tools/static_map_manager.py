@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import argparse, json, ipaddress, sys
+import argparse, json, ipaddress, sys, shlex
 parser = argparse.ArgumentParser()
 parser.add_argument('filename', nargs='*');
 parser.add_argument('-l', '--list-file', nargs='*', default=[]);
@@ -12,6 +12,11 @@ parser.add_argument('-O', '--offset-limit', default='4294967296');
 args = parser.parse_args()
 if args.build_relay_map:
     domains = []
+    for map_file in args.filename:
+        map_json = json.load(open(map_file, 'r'))
+        if 'relay_map' in map_json:
+            for e in map_json['relay_map']:
+                domains.append(str(e[0]))
     for host_file in args.hosts_file:
         with open(host_file, 'r') as h_file:
             for l in h_file.readlines():
@@ -26,11 +31,7 @@ if args.build_relay_map:
                 hosts_file_line = shlex.split(l, comments=True)
                 for d in hosts_file_line:
                     domains.append(d)
-    for map_file in args.filename:
-        map_json = json.load(open(map_file, 'r'))
-        if 'relay_map' in map_json:
-            for e in map_json['relay_map']:
-                domains.append(str(e[0]))
+                    break
     domain_dict = {}
     offset = int(args.offset)
     offset_limit = int(args.offset_limit)
@@ -54,6 +55,14 @@ if args.combine:
     for f in args.filename:
         input_file_json = json.load(open(f, 'r'))
         for m in result:
+            if m in input_file_json:
+                for m_entry in input_file_json[m]:
+                    result[m][m_entry[0]] = m_entry[1]
+    for f in args.list_file:
+        input_file_json = json.load(open(f, 'r'))
+        for m in result:
+            if m == 'relay_map':
+                continue
             if m in input_file_json:
                 for m_entry in input_file_json[m]:
                     result[m][m_entry[0]] = m_entry[1]

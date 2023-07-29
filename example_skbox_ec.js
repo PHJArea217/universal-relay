@@ -31,10 +31,11 @@
  * settings; you must select "Proxy DNS when using SOCKS v5", or otherwise it
  * might not work.
  */
+const fs = require('fs');
 const app_func = require('./app_func.js');
 const dns_he = require('./dns_he.js');
 const endpoint = require('./endpoint.js');
-const example_sm = require('./example-static-map.json');
+const example_sm = JSON.parse(fs.readFileSync('./example-static-map.json'));
 const server_generic = require('./server_generic.js');
 const transparent_server = require('./transparent_server.js');
 const socks_server = require('./socks_server.js');
