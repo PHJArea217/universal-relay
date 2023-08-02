@@ -83,7 +83,9 @@ if args.make_list:
     for f in args.filename:
         file_json = json.load(open(f, 'r'))
         for e in file_json:
-            print(str(e))
+            se = str(e)
+            if filter_.match(se):
+                print(se)
     sys.exit(0)
 if args.relay_map_to_hosts:
     ipv6_prefix = int(args.ipv6_prefix, base=0) << 64
