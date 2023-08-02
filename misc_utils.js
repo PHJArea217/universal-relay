@@ -36,4 +36,7 @@ function checkIPClass(classes, ep) {
 	return false;
 }
 exports.checkIPClass = checkIPClass;
+// for A and AAAA records of domain names on public IANA/ICANN internet. For DN42, you may need to allow 172.16.0.0/12 and fd00::/8.
 exports.endpoint_is_private_ip = checkIPClass.bind(null, ['loopback', 'privatenet', 'linklocal', 'special', 'doc']);
+exports.endpoint_is_sensitive = checkIPClass.bind(null, ['loopback', 'linklocal']);
+exports.endpoint_is_loopback = checkIPClass.bind(null, ['loopback']);
