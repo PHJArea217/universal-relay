@@ -32,6 +32,8 @@ async function common_at_domain(ep) {
 var ts = server_generic.make_server(transparent_server.transparent_server, async (e, s) => {
 	let ep = endpoint.fromCRAreq(e.req);
 	let ep_iid = ep.getHostNR(0xfedb120045007800n << 64n, 64);
+	// let ep_iid2 = ep.getHostNR(/* ipv4 prefix */);
+	// if (ep_iid2 >= 0n) ep_iid = 0x5ff700101000000n /* offset */ + ep_iid2;
 	if (ep_iid >= 0n) {
 		let new_ep = app.transparent_to_domain(ep_iid, ep.getPort());
 		if (new_ep) {
