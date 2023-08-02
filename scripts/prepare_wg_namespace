@@ -1,0 +1,31 @@
+#!/bin/sh
+set -eu
+: / "${IPV6_PREFIX:=fedb:1200:4500:7800::/64}"
+: / "${IPV4_PREFIX:=100.92.0.0/16}"
+export IPV6_PREFIX IPV4_PREFIX
+unshare -n sh -eu -c '
+ip link set lo up
+ip route add local "$IPV6_PREFIX" dev lo
+ip route add local "$IPV4_PREFIX" dev lo
+ip6tables-nft -t mangle -A PREROUTING -p tcp -d "${IPV6_PREFIX}" -j TPROXY --on-ip "::ffff:127.0.0.20" --on-port 80
+iptables-nft -t mangle -A PREROUTING -p tcp -d "${IPV4_PREFIX}" -j TPROXY --on-ip "127.0.0.20" --on-port 80
+:>"$1"
+mount --bind /proc/self/ns/net "$1"' _ "$1"
+if [ "x" = "x${2:-}" ]; then
+	exit 0
+fi
+ip link add relaywg0 type wireguard
+ip link set relaywg0 netns /proc/self/fd/3 3<"$1"
+nsenter --net="$1" sh -eu -c 'shift 1
+if [ -n "$5" ]; then
+	for i in $5; do ip route add unreachable "$i"
+fi
+for i in $2; do
+	ip addr add "$i" dev "relaywg0"
+done
+ip link set relaywg0 up
+ip route add 0.0.0.0/0 dev relaywg0
+ip route add "::/0" dev relaywg0
+wg addconf relaywg0 "$3"
+wg set relaywg0 private-key "$4"
+' _ "$@"
