@@ -9,12 +9,17 @@ const example_sm = require('./example-static-map.json');
 const server_generic = require('./server_generic.js');
 const transparent_server = require('./transparent_server.js');
 const socks_server = require('./socks_server.js');
+const mdns = require('./mdns.js');
 const app = new app_func.TransparentHandler({static_maps: example_sm, prefix: 0xfedb120045007800n});
 const dns = require('dns');
 const net = require('net');
 var my_dns = new dns.Resolver();
 my_dns.setServers(['8.8.8.8']);
 var my_dns_resolver = dns_he.make_endpoint_resolver(my_dns, '6_weak', null);
+// Uses Node.js dns.lookup(), which calls libc getaddrinfo()
+// var my_dns_resolver = mdns.make_libc_endpoint_resolver({all: true, flags: 0});
+// Uses the systemd-resolved socket interface
+// var my_dns_resolver = (d, ds, ep) => mdns.systemd_resolve(ds, null, true, ep);
 async function common_at_domain(ep) {
 	let sd_domain = ep.getSubdomainsOf(['arpa', 'home', 'u-relay'], 1);
 	if (sd_domain && sd_domain[0]) {
@@ -24,6 +29,7 @@ async function common_at_domain(ep) {
 	}
 	let i = await ep.resolveDynamic(my_dns_resolver, {ipOnly: true});
 	// i = i.flatMap(/* a function to filter, modify, or multiply IPs returned by DNS */);
+	// i = dns_he.dns_sort(i, {});
 	let result = [];
 	for (let e of i) {
 		/* add info such as bind address, link local scope, or NAT64 prefix */
