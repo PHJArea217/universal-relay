@@ -30,6 +30,7 @@ async function common_at_domain(ep) {
 	let i = await ep.resolveDynamic(my_dns_resolver, {ipOnly: true});
 	// i = i.flatMap(/* a function to filter, modify, or multiply IPs returned by DNS */);
 	// i = dns_he.dns_sort(i, {});
+	// return i.map(e => e.toCRAreq());
 	let result = [];
 	for (let e of i) {
 		/* add info such as bind address, link local scope, or NAT64 prefix */
