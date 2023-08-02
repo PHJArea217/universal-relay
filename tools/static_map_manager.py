@@ -109,6 +109,10 @@ if args.relay_map_to_hosts:
                 if my_ipv4 != None:
                     print(f"""address=/{e[0]}/{my_ipv4}""")
                 print(f"""address=/{e[0]}/{my_ip}""")
+            elif args.format == 'unbound-local-data':
+                print(f'''\tlocal-data: "{e[0]}. IN AAAA {str(my_ip)}"''')
+                if my_ipv4 != None:
+                    print(f'''\tlocal-data: "{e[0]}. IN A {str(my_ipv4)}"''')
             else: # --format hosts is the default
                 if my_ipv4 != None:
                     print(str(my_ipv4) + ' ' + e[0])
