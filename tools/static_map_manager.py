@@ -14,6 +14,7 @@ parser.add_argument('-p', '--ipv6-prefix', default='0xfedb120045007800')
 parser.add_argument('-4', '--ipv4-start', default='198.18.0.0')
 parser.add_argument('-f', '--format', default='hosts')
 args = parser.parse_args()
+filter_ = re.compile(r'^[a-z0-9_.-]*$')
 if args.build_relay_map:
     domains = []
     for map_file in args.filename:
@@ -40,8 +41,11 @@ if args.build_relay_map:
     offset = int(args.offset)
     offset_limit = int(args.offset_limit)
     offset_relative = 0
-    for d in domains:
-        if d in domain_dict:
+    for d_ in domains:
+        d = d_.lower()
+        if filter_.match(d) == None:
+            continue
+        elif d in domain_dict:
             pass
         else:
             domain_dict[d] = (offset + offset_relative) & 0xffffffff
@@ -87,7 +91,6 @@ if args.relay_map_to_hosts:
     ipv4_offset = int(args.offset)
     ipv4_offset_limit = int(args.offset_limit)
     file_json = json.load(open(args.filename[0], 'r'))
-    filter_ = re.compile(r'^[a-z0-9_.-]*$')
     for e in file_json['relay_map']:
         if filter_.match(e[0]) != None:
             my_ip = ipaddress.IPv6Address(ipv6_prefix | 0x5ff700100000000 | (e[1] & 0xffffffff))
