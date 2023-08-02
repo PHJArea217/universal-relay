@@ -307,10 +307,13 @@ function dns_sort(endpoints, options) {
 	return result;
 }
 exports.resolve_dns_dualstack = resolve_dns_dualstack;
+exports.resolve_dns_dualstack2 = function (a, b, c, d) {return resolve_dns_dualstack(d, a, b, c);};
 exports.make_endpoint_resolver = make_endpoint_resolver;
 exports.connect_HE = connect_HE;
 exports.makeIPRewriteDNS = makeIPRewriteDNS;
 exports.connFuncDirect = connFuncDirect;
+exports.connFuncDirectTLS = connFuncDirectTLS;
 exports.connFuncSocks = connFuncSocks;
 exports.simple_connect_HE = simple_connect_HE;
 exports.dns_sort = dns_sort;
+exports.dns_sort2 = function (a, b) {return dns_sort(b, a);};
