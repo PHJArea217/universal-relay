@@ -9,6 +9,7 @@ ip route add local "$IPV6_PREFIX" dev lo
 ip route add local "$IPV4_PREFIX" dev lo
 ip6tables-nft -t mangle -A PREROUTING -p tcp -d "${IPV6_PREFIX}" -j TPROXY --on-ip "::ffff:127.0.0.20" --on-port 80
 iptables-nft -t mangle -A PREROUTING -p tcp -d "${IPV4_PREFIX}" -j TPROXY --on-ip "127.0.0.20" --on-port 80
+iptables-nft -A INPUT ! -i lo -d 127.0.0.0/8 -j DROP
 :>"$1"
 mount --bind /proc/self/ns/net "$1"' _ "$1"
 if [ "x" = "x${2:-}" ]; then
