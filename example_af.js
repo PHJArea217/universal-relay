@@ -23,8 +23,10 @@ async function common_at_domain(ep) {
 		ep = new_ep2;
 	}
 	let i = await ep.resolveDynamic(my_dns_resolver, {ipOnly: true});
+	// i = i.flatMap(/* a function to filter, modify, or multiply IPs returned by DNS */);
 	let result = [];
 	for (let e of i) {
+		/* add info such as bind address, link local scope, or NAT64 prefix */
 		result.push(e.toCRAreq());
 	}
 	return result;
