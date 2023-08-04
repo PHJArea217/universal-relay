@@ -13,7 +13,28 @@ parser.add_argument('-t', '--relay-map-to-hosts', action='store_true')
 parser.add_argument('-p', '--ipv6-prefix', default='0xfedb120045007800')
 parser.add_argument('-4', '--ipv4-start', default='198.18.0.0')
 parser.add_argument('-f', '--format', default='hosts')
+parser.add_argument('-a', '--allow-domain', nargs='*', default=[])
+parser.add_argument('-d', '--deny-domain', nargs='*', default=[])
+parser.add_argument('-A', '--allow-domain-regex', nargs='*', default=[])
+parser.add_argument('-D', '--deny-domain-regex', nargs='*', default=[])
 args = parser.parse_args()
+allow_regex = [re.compile(a) for a in args.allow_domain_regex]
+deny_regex = [re.compile(a) for a in args.deny_domain_regex]
+def validate_domain(domain_name):
+    for a in args.allow_domain:
+        if domain_name == a or domain_name.endswith('.' + a):
+            return True
+    for r in allow_regex:
+        if r.match(domain_name):
+            return True
+    for d in args.deny_domain:
+        if domain_name == d or domain_name.endswith('.' + d):
+            return False
+    for r in deny_regex:
+        if r.match(domain_name):
+            return False
+    return True
+
 filter_ = re.compile(r'^[a-z0-9_.-]*$')
 if args.build_relay_map:
     domains = []
@@ -47,6 +68,8 @@ if args.build_relay_map:
             continue
         elif d in domain_dict:
             pass
+        elif not validate_domain(d):
+            continue
         else:
             domain_dict[d] = (offset + offset_relative) & 0xffffffff
             offset_relative = offset_relative + 1
