@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+# This script should be used in the same network namespace as the transparent sockets.
+if ! [ 'tproxy_only' = "$1" ]; then
+	ip route add local 0.0.0.0/0 dev lo table 1200
+	ip route add local '::/0' dev lo table 1200
+	ip -4 rule add fwmark 1200 lookup 1200
+	ip -6 rule add fwmark 1200 lookup 1200
+fi
+ip route add local '100.80.0.0/16' dev lo
+ip route add local 'fedb:1200:4500:7800::/64' dev lo
+iptables-nft -t mangle -A PREROUTING -i eth0 -d '100.80.0.0/16' -p tcp -j TPROXY --on-ip '127.0.0.20' --on-port 80 --tproxy-mark 1200
+ip6tables-nft -t mangle -A PREROUTING -i eth0 -d 'fedb:1200:4500:7800::/64' -p tcp -j TPROXY --on-ip '::ffff:127.0.0.20' --on-port 80 --tproxy-mark 1200
