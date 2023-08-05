@@ -82,7 +82,7 @@ if args.build_relay_map:
     print(json.dumps({'relay_map': new_domains}))
     sys.exit(0)
 if args.combine:
-    result = {'relay_map': {}, 'dns_map': {}, 'resolve_map': {}, 'groupsub_map': {}, 'dc_map': {}}
+    result = {'relay_map': {}, 'dns_map': {}, 'resolve_map': {}, 'groupsub_map': {}, 'dc_map': {}, 'do_map': {}, 'ip_map': {}}
     for f in args.filename:
         input_file_json = json.load(open(f, 'r'))
         for m in result:
