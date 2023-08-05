@@ -30,6 +30,9 @@ function resolve_dns_dualstack(_domainName, dnsResolver, mode, overrideFunc) {
 			let u_ipv6 = state.ipv6 || [];
 			let result = [];
 			switch (mode) {
+				case "all": /* for dns_sort */
+					result.push(...u_ipv6, ...u_ipv4);
+					break;
 				case "4_strong": /* strongly prefer ipv4 */
 					for (let i of u_ipv4) {result.push(i); if (result.length > 3) break;}
 					for (let i of u_ipv6) {result.push(i); if (result.length > 3) break;}

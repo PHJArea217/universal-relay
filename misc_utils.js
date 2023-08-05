@@ -1,4 +1,5 @@
 const endpoint = require('./endpoint.js');
+const dns = require('dns');
 function checkIPClass(classes, ep) {
 	let v = ep.getIPBigInt();
 	for (let c of classes) {
@@ -176,7 +177,14 @@ function epm_setattr(ep, epm_value) {
 function epm_apply(epm, ep, oep) {
 	let oep_ = oep || ep;
 	return epm_setattr(oep, epm.getValue(ep, null));
-
+}
+function make_epm_dns_resolver(epm_apply_result) {
+	if (!epm_apply_result) return null;
+	if (!epm_apply_result.dns_servers) return null;
+	let dns_resolver = new dns.Resolver();
+	dns_resolver.setServers(epm_apply_result.dns_servers);
+	return dns_resolver;
+}
 exports.checkIPClass = checkIPClass;
 // for A and AAAA records of domain names on public IANA/ICANN internet. For DN42, you may need to allow 172.16.0.0/12 and fd00::/8.
 exports.endpoint_is_private_ip = checkIPClass.bind(null, ['loopback', 'privatenet', 'linklocal', 'special', 'doc']);
@@ -188,3 +196,4 @@ exports.make_wcm_for_domains = make_wcm_for_domains;
 exports.EndpointMap = EndpointMap;
 exports.epm_setattr = epm_setattr;
 exports.epm_apply = epm_apply;
+exports.make_epm_dns_resolver = make_epm_dns_resolver;
