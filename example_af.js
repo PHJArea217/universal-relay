@@ -13,9 +13,14 @@ const mdns = require('./mdns.js');
 const app = new app_func.TransparentHandler({static_maps: example_sm, prefix: 0xfedb120045007800n});
 const dns = require('dns');
 const net = require('net');
+const misc_utils = require('./misc_utils.js');
+const domain_level_filter = new misc_utils.EndpointMap();
+domain_level_filter.addAll(example_sm.do_map || []);
+const ip_level_filter = new misc_utils.EndpointMap();
+ip_level_filter.addAll(example_sm.ip_map || []);
 var my_dns = new dns.Resolver();
 my_dns.setServers(['8.8.8.8']);
-var my_dns_resolver = dns_he.make_endpoint_resolver(my_dns, '6_weak', null);
+var my_dns_resolver = dns_he.make_endpoint_resolver(my_dns, 'all', null);
 // Uses Node.js dns.lookup(), which calls libc getaddrinfo()
 // var my_dns_resolver = mdns.make_libc_endpoint_resolver({all: true, flags: 0});
 // Uses the systemd-resolved socket interface
@@ -27,9 +32,21 @@ async function common_at_domain(ep) {
 		if (!new_ep2) throw new Error();
 		ep = new_ep2;
 	}
-	let i = await ep.resolveDynamic(my_dns_resolver, {ipOnly: true});
+	let epm_result = misc_utils.epm_apply(domain_level_filter, ep);
+	let dns_resolver = my_dns_resolver;
+	if (epm_result.action === 'delete') throw new Error();
+	if (epm_result.dns_servers) {
+		dns_resolver = dns_he.make_endpoint_resolver(misc_utils.make_epm_dns_resolver(epm_result), 'all', null);
+	}
+	let i = await ep.resolveDynamic(dns_resolver, {ipOnly: true});
 	// i = i.flatMap(/* a function to filter, modify, or multiply IPs returned by DNS */);
-	// i = dns_he.dns_sort(i, {});
+	let filtered = [];
+	for (let e of i) {
+		let epm_result2 = misc_utils.epm_apply(ip_level_filter, e);
+		if (epm_result2.action === 'delete') continue;
+		filtered.push(e);
+	}
+	i = dns_he.dns_sort(filtered, {mode: epm_result.dns_mode || '6_weak'});
 	// return i.map(e => e.toCRAreq());
 	let result = [];
 	for (let e of i) {

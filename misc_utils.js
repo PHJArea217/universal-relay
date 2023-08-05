@@ -145,6 +145,7 @@ function epm_setattr(ep, epm_value) {
 			case 'ip_type':
 			case 'ipv6_scope':
 			case 'tls_options':
+			case 'user_options':
 				ep.options_map_.set("!" + k, v);
 				break;
 			case 'dns':
