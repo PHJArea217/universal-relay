@@ -35,8 +35,61 @@ function checkIPClass(classes, ep) {
 	}
 	return false;
 }
+class WildcardMap {
+	constructor(group_function, input_coalesce, key_func) {
+		this.group_function = group_function;
+		this.key_func = key_func || (a => a);
+		this.input_coalesce = input_coalesce;
+		this.maps = new Map();
+		this.keys_list = [];
+	}
+	getMap(group) {
+		if (!this.maps.has(group)) {
+			let new_map = new Map();
+			this.maps.set(group, new_map);
+			this.keys_list = [...this.maps.keys()];
+			this.keys_list.sort((a, b) => (a > b) ? -1 : ((a < b) ? 1 : 0));
+			return new_map;
+		}
+		return this.maps.get(group);
+	}
+	getMapByInput(input_value) {
+		return this.getMap(this.group_function(input_value));
+	}
+	setValue(group, key, value) {
+		return this.getMap(group).set(this.key_func(key), value);
+	}
+	setValueInGroup(key, value) {
+		return this.getMapByInput(key).set(this.key_func(key), value);
+	}
+	getAll(key, input_coalesce_func, default_value) {
+		let cf = input_coalesce_func || this.input_coalesce;
+		for (let k of this.keys_list) {
+			let f = this.maps.get(k);
+			let f_key = cf(k, key);
+			if (f.has(f_key)) return f.get(f_key);
+		}
+		return default_value;
+	}
+}
+function make_wcm_for_ips() {
+	return new WildcardMap(s => BigInt(s[1]), function (group, key) {
+		let bg = BigInt(group);
+		if ((bg >= 0n) && (bg <= 128n)) {
+			let m = (1n << (128n - bg)) - 1n;
+			return key & ~m;
+		}
+		return undefined;
+	}, s => BigInt(s[0]));
+}
+function make_wcm_for_domains() {
+	return new WildcardMap(d => d.length, (group, key) => (key.length < group ? undefined : key.slice(0, group).join('.')), k => k.join('.'));
+}
 exports.checkIPClass = checkIPClass;
 // for A and AAAA records of domain names on public IANA/ICANN internet. For DN42, you may need to allow 172.16.0.0/12 and fd00::/8.
 exports.endpoint_is_private_ip = checkIPClass.bind(null, ['loopback', 'privatenet', 'linklocal', 'special', 'doc']);
 exports.endpoint_is_sensitive = checkIPClass.bind(null, ['loopback', 'linklocal']);
 exports.endpoint_is_loopback = checkIPClass.bind(null, ['loopback']);
+exports.WildcardMap = WildcardMap;
+exports.make_wcm_for_ips = make_wcm_for_ips;
+exports.make_wcm_for_domains = make_wcm_for_domains;
