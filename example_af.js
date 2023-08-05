@@ -51,7 +51,13 @@ async function common_at_domain(ep) {
 	if (epm_result.dns_servers) {
 		dns_resolver = dns_he.make_endpoint_resolver(misc_utils.make_epm_dns_resolver(epm_result), 'all', null);
 	}
-	let i = await ep.resolveDynamic(dns_resolver, {ipOnly: true});
+	let i = null;
+	if (epm_result.dns_mode === 'clone') {
+		epm_result.dns_mode = '6_weak';
+		i = [ep.clone()];
+	} else {
+		i = await ep.resolveDynamic(dns_resolver, {ipOnly: true});
+	}
 	// i = i.flatMap(/* a function to filter, modify, or multiply IPs returned by DNS */);
 	let filtered = [];
 	for (let e of i) {
