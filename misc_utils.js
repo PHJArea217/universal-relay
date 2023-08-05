@@ -72,6 +72,11 @@ class WildcardMap {
 		return default_value;
 	}
 }
+// Check an IP address against CIDR prefixes, using a "longest prefix match" algorithm.
+// group identifier is the CIDR prefix length.
+// input to setValue is [prefix, length] array describing a CIDR prefix. Use
+// endpoint.ofPrefix to generate such an array from a CIDR prefix string.
+// input to getAll is the IP address to check as returned by Endpoint getIPBigInt()
 function make_wcm_for_ips() {
 	return new WildcardMap(s => BigInt(s[1]), function (group, key) {
 		let bg = BigInt(group);
@@ -82,6 +87,9 @@ function make_wcm_for_ips() {
 		return undefined;
 	}, s => BigInt(s[0]));
 }
+// Check a domain name to see if it is equal to any domain name in the map or a subdomain thereof.
+// group identifier is the number of labels of the domain.
+// input to setValue and getAll is the domain name label array, as returned by Endpoint getDomain()
 function make_wcm_for_domains() {
 	return new WildcardMap(d => d.length, (group, key) => (key.length < group ? undefined : key.slice(0, group).join('.')), k => k.join('.'));
 }
