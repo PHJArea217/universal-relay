@@ -106,7 +106,25 @@ function connect_HE(req_array, connFunc, addOnAbort, origCRA) {
 			if (state.done) return;
 			if (req_array.length === 0) return;
 			let current_req = req_array[0];
-			let conn = ((current_req.hasOwnProperty("__orig_endpoint__") ? current_req.__orig_endpoint__.options_map_.get("!connFunc") : null) || connFunc)(current_req);
+			let thisConnFunc = connFunc;
+			if (current_req.hasOwnProperty('__orig_endpoint')) {
+				let om = current_req.__orig_endpoint__.options_map_;
+				let cft = om.get("!connFuncType");
+				switch (cft) {
+					case 'direct':
+						thisConnFunc = connFuncDirect;
+						break;
+					case 'socks':
+						thisConnFunc = connFuncSocks;
+						break;
+					case 'directTLS':
+						thisConnFunc = connFuncDirectTLS;
+						break;
+					default:
+						thisConnFunc = om.get("!connFunc") || connFunc;
+				}
+			}
+			let conn = thisConnFunc(current_req);
 			req_array.shift();
 			pendingConnections.push(conn);
 			let onFailureCalled = false;

@@ -128,8 +128,51 @@ class EndpointMap {
 		return this.ip_map.getAll(ep.getIPBigInt(), null, default_value);
 	}
 }
+function epm_setattr(ep, epm_value) {
+	if (!epm_value) return {};
+	let result = {};
+	if (epm_value === 'delete') return {"action": "delete"};
+	for (const [k, v] of epm_value) {
+		switch (k) {
+			case 'bind_addr':
+			case 'bind_addr4':
+			case 'bind_addr6':
+			case 'bind_addr4m':
+			case 'connFuncType':
+			case 'socks_server':
+			case 'ip_type':
+			case 'ipv6_scope':
+			case 'tls_options':
+				ep.options_map_.set("!" + k, v);
+				break;
+			case 'dns':
+				if (Array.isArray(v)) {
+					result.dns_mode = String(v[0] || '6_weak');
+					if (v.length > 1) {
+						result.dns_servers = v.slice(1).map(a => String(a));
+					}
+				}
+				break;
+			case 'ip_xlate':
+				let cidr = endpoint.ofPrefix(String(v));
+				let netmask = (1n << (128n - cidr[1])) - 1n;
+				ep.setIPBigInt((cidr[0] & ~netmask) | (ep.getIPBigInt() & netmask));
+				break;
+			case 'domain_xlate':
+				if (Array.isArray(v) && (v.length >= 2)) {
+					let domain_ = endpoint.ofDomain(String(v[1]));
+					ep.setDomain2([...domain_, ...((ep.getDomain() || []).slice(Number(v[0]) || 0))], false);
+				}
+				break;
 
-			
+		}
+	}
+	return result;
+}
+function epm_apply(epm, ep, oep) {
+	let oep_ = oep || ep;
+	return epm_setattr(oep, epm.getValue(ep, null));
+
 exports.checkIPClass = checkIPClass;
 // for A and AAAA records of domain names on public IANA/ICANN internet. For DN42, you may need to allow 172.16.0.0/12 and fd00::/8.
 exports.endpoint_is_private_ip = checkIPClass.bind(null, ['loopback', 'privatenet', 'linklocal', 'special', 'doc']);
