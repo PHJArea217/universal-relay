@@ -25,6 +25,19 @@ var my_dns_resolver = dns_he.make_endpoint_resolver(my_dns, 'all', null);
 // var my_dns_resolver = mdns.make_libc_endpoint_resolver({all: true, flags: 0});
 // Uses the systemd-resolved socket interface
 // var my_dns_resolver = (d, ds, ep) => mdns.systemd_resolve(ds, null, true, ep);
+// General mode of operation:
+// Stage 1 -- The programmatic DNS server returns a randomly-generated "cookie" IPv6 address for the queried domain name.
+// Stage 2 -- the "cookie" IPv6 address is transformed into the original domain name.
+// Stage 3 -- The domain name is resolved into IP addresses and the Happy Eyeballs algorithm is used to connect to the domain name.
+// Stage 4 -- The server and client sockets are piped in both directions, relaying information between each other.
+// common_at_domain:
+// 1. Check that the domain ends in u-relay.home.arpa. If so, then things like group substitution and ip4-/ip6- are parsed.
+// 2. Check the domain name against the domain_level_filter (do_map in example-static-map.json), and if things are found,
+// then they are applied. The DNS server may change due to this, or the default DNS server is used.
+// 3. The domain name is resolved into IP addresses which are wrapped in IP address endpoints.
+// 4. The IP addresses are individually checked against the ip_level_filter (ip_map in example-static-map.json)
+// 5. The dns_sort function is called, reducing the number of IP addresses to check to 3 per IPv4/IPv6 and 5 in total.
+// 6. The final remaining endpoints are converted into connReadAttributes to pass to Happy Eyeballs (it's a long story that has to do with compatibility reasons)
 async function common_at_domain(ep) {
 	let sd_domain = ep.getSubdomainsOf(['arpa', 'home', 'u-relay'], 1);
 	if (sd_domain && sd_domain[0]) {
@@ -44,6 +57,7 @@ async function common_at_domain(ep) {
 	for (let e of i) {
 		let epm_result2 = misc_utils.epm_apply(ip_level_filter, e);
 		if (epm_result2.action === 'delete') continue;
+		// switch (e.options_map_.get("!user_category", "")) {}
 		filtered.push(e);
 	}
 	i = dns_he.dns_sort(filtered, {mode: epm_result.dns_mode || '6_weak'});
