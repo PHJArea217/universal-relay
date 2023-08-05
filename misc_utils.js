@@ -1,3 +1,4 @@
+const endpoint = require('./endpoint.js');
 function checkIPClass(classes, ep) {
 	let v = ep.getIPBigInt();
 	for (let c of classes) {
@@ -93,6 +94,42 @@ function make_wcm_for_ips() {
 function make_wcm_for_domains() {
 	return new WildcardMap(d => d.length, (group, key) => (key.length < group ? undefined : key.slice(0, group).join('.')), k => k.join('.'));
 }
+class EndpointMap {
+	constructor() {
+		this.ip_map = make_wcm_for_ips();
+		this.domain_map = make_wcm_for_domains();
+	}
+	addAll(entries) {
+		for (const [k, v] of entries) {
+			let s_k = String(k);
+			let cidr = null;
+			let domain_ = null;
+			if (s_k.indexOf('/') >= 0) {
+				cidr = endpoint.ofPrefix(s_k);
+			} else {
+				let ep = new endpoint.Endpoint().setDomain(s_k);
+				if (ep.domain_) {
+					domain_ = ep.getDomain();
+				} else {
+					cidr = [ep.getIPBigInt(), 128n];
+				}
+			}
+			if (domain_) {
+				this.domain_map.setValueInGroup(domain_, v);
+			} else {
+				this.ip_map.setValueInGroup(cidr, v);
+			}
+		}
+	}
+	getValue(ep, default_value) {
+		if (ep.domain_) {
+			return this.domain_map.getAll(ep.getDomain(), null, default_value);
+		}
+		return this.ip_map.getAll(ep.getIPBigInt(), null, default_value);
+	}
+}
+
+			
 exports.checkIPClass = checkIPClass;
 // for A and AAAA records of domain names on public IANA/ICANN internet. For DN42, you may need to allow 172.16.0.0/12 and fd00::/8.
 exports.endpoint_is_private_ip = checkIPClass.bind(null, ['loopback', 'privatenet', 'linklocal', 'special', 'doc']);
@@ -101,3 +138,4 @@ exports.endpoint_is_loopback = checkIPClass.bind(null, ['loopback']);
 exports.WildcardMap = WildcardMap;
 exports.make_wcm_for_ips = make_wcm_for_ips;
 exports.make_wcm_for_domains = make_wcm_for_domains;
+exports.EndpointMap = EndpointMap;
