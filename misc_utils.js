@@ -129,9 +129,10 @@ class EndpointMap {
 	}
 }
 function epm_setattr(ep, epm_value) {
-	if (!epm_value) return {};
+	if (!epm_value) return {"action": "notfound"};
 	let result = {};
 	if (epm_value === 'delete') return {"action": "delete"};
+	try {
 	for (const [k, v] of epm_value) {
 		switch (k) {
 			case 'bind_addr':
@@ -164,9 +165,12 @@ function epm_setattr(ep, epm_value) {
 					ep.setDomain2([...domain_, ...((ep.getDomain() || []).slice(Number(v[0]) || 0))], false);
 				}
 				break;
-
 		}
 	}
+	} catch (e) {
+		return {"action": "delete", "exception": e};
+	}
+	result.action = "found";
 	return result;
 }
 function epm_apply(epm, ep, oep) {
@@ -182,3 +186,5 @@ exports.WildcardMap = WildcardMap;
 exports.make_wcm_for_ips = make_wcm_for_ips;
 exports.make_wcm_for_domains = make_wcm_for_domains;
 exports.EndpointMap = EndpointMap;
+exports.epm_setattr = epm_setattr;
+exports.epm_apply = epm_apply;
