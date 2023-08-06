@@ -101,7 +101,10 @@ class EndpointMap {
 		this.domain_map = make_wcm_for_domains();
 	}
 	addAll(entries) {
-		for (const [k, v] of entries) {
+		for (const kv of entries) {
+			if (!Array.isArray(kv)) continue;
+			let k = kv[0];
+			let v = (kv.length > 2) ? kv.slice(1) : kv[1];
 			let s_k = String(k);
 			let cidr = null;
 			let domain_ = null;
@@ -134,7 +137,11 @@ function epm_setattr(ep, epm_value) {
 	let result = {};
 	if (epm_value === 'delete') return {"action": "delete"};
 	try {
-	for (const [k, v] of epm_value) {
+	for (const kv of epm_value) {
+		if (!Array.isArray(kv)) continue;
+		let k = kv[0];
+		let v = (kv.length > 2) ? kv.slice(1) : kv[1];
+		let va = ((kv.length === 2) && Array.isArray(kv[1])) ? kv[1] : kv.slice(1);
 		switch (k) {
 			case 'bind_addr':
 			case 'bind_addr4':
@@ -150,11 +157,9 @@ function epm_setattr(ep, epm_value) {
 				ep.options_map_.set("!" + k, v);
 				break;
 			case 'dns':
-				if (Array.isArray(v)) {
-					result.dns_mode = String(v[0] || '6_weak');
-					if (v.length > 1) {
-						result.dns_servers = v.slice(1).map(a => String(a));
-					}
+				result.dns_mode = String(va[0] || '6_weak');
+				if (va.length > 1) {
+					result.dns_servers = va.slice(1).map(a => String(a));
 				}
 				break;
 			case 'ip_xlate':
@@ -163,9 +168,9 @@ function epm_setattr(ep, epm_value) {
 				ep.setIPBigInt((cidr[0] & ~netmask) | (ep.getIPBigInt() & netmask));
 				break;
 			case 'domain_xlate':
-				if (Array.isArray(v) && (v.length >= 2)) {
-					let domain_ = endpoint.ofDomain(String(v[1]));
-					ep.setDomain2([...domain_, ...((ep.getDomain() || []).slice(Number(v[0]) || 0))], false);
+				if (va.length >= 2) {
+					let domain_ = endpoint.ofDomain(String(va[1]));
+					ep.setDomain2([...domain_, ...((ep.getDomain() || []).slice(Number(va[0]) || 0))], false);
 				}
 				break;
 		}

@@ -88,7 +88,7 @@ if args.combine:
         for m in result:
             if m in input_file_json:
                 for m_entry in input_file_json[m]:
-                    result[m][m_entry[0]] = m_entry[1]
+                    result[m][m_entry[0]] = m_entry[1:]
     for f in args.list_file:
         input_file_json = json.load(open(f, 'r'))
         for m in result:
@@ -96,10 +96,10 @@ if args.combine:
                 continue
             if m in input_file_json:
                 for m_entry in input_file_json[m]:
-                    result[m][m_entry[0]] = m_entry[1]
+                    result[m][m_entry[0]] = m_entry[1:]
     result_map = {}
     for m in result:
-        result_map[m] = [[a,result[m][a]] for a in result[m]]
+        result_map[m] = [([a] + result[m][a]) for a in result[m]]
     print(json.dumps(result_map))
     sys.exit(0)
 if args.make_list:
