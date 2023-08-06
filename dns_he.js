@@ -110,7 +110,7 @@ function connect_HE(req_array, connFunc, addOnAbort, origCRA) {
 			if (req_array.length === 0) return;
 			let current_req = req_array[0];
 			let thisConnFunc = connFunc;
-			if (current_req.hasOwnProperty('__orig_endpoint')) {
+			if (current_req.hasOwnProperty('__orig_endpoint__')) {
 				let om = current_req.__orig_endpoint__.options_map_;
 				let cft = om.get("!connFuncType");
 				switch (cft) {
