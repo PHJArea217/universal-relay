@@ -2,6 +2,7 @@
 const net = require('net');
 function readFromSocket(socket) {
 	return new Promise((resolve, reject) => {
+		let state = {done: false};
 		if (!socket.readable) {
 			resolve(null);
 			return;
@@ -16,8 +17,30 @@ function readFromSocket(socket) {
 			return;
 		}
 		socket.once('readable', () => {
-			resolve(socket.read());
+			if (state.done) return;
+			state.done = true;
+			resolve(socket.read() || Buffer.from([]));
 		});
+		socket.once('error', () => {
+			if (state.done) return;
+			state.done = true;
+			resolve(null);
+		});
+		socket.once('close', () => {
+			if (state.done) return;
+			state.done = true;
+			resolve(null);
+		});
+		socket.once('end', () => {
+			if (state.done) return;
+			state.done = true;
+			resolve(null);
+		});
+		setTimeout(() => {
+			if (state.done) return;
+			state.done = true;
+			resolve(null);
+		}, 10000);
 	});
 }
 
