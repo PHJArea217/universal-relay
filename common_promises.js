@@ -2,6 +2,28 @@
 const net = require('net');
 function readFromSocket(socket) {
 	return new Promise((resolve, reject) => {
+		if (!socket.readable) {
+			resolve(null);
+			return;
+		}
+		let b = socket.read();
+		if (b) {
+			resolve(b);
+			return;
+		}
+		if (!socket.readable) {
+			resolve(null);
+			return;
+		}
+		socket.once('readable', () => {
+			resolve(socket.read());
+		});
+	});
+}
+
+/*
+function readFromSocket(socket) {
+	return new Promise((resolve, reject) => {
 		let done = false;
 		let handlers = {
 			data: function(buf) {
@@ -39,6 +61,7 @@ function readFromSocket(socket) {
 		socket.resume();
 	});
 }
+*/
 function socketConnect(options, destroyOnClose) {
 	return new Promise((resolve, reject) => {
 		let conn = net.createConnection(options);
