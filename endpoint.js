@@ -5,8 +5,12 @@ class Endpoint {
 	constructor () {
 		this.ip_ = 0n;
 		this.domain_ = null;
-		this.options_map_ = new Map();
+		// this.options_map_ = new Map();
 		this.port_ = 0;
+	}
+	get options_map_() {
+		if (!this._options_map) this._options_map = new Map();
+		return this._options_map;
 	}
 	setIPBigInt (newIP) {
 		if ((newIP >= 0n) && (newIP < (1n<<128n))) {
