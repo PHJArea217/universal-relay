@@ -192,6 +192,13 @@ function make_epm_dns_resolver(epm_apply_result) {
 	dns_resolver.setServers(epm_apply_result.dns_servers);
 	return dns_resolver;
 }
+function json_map_reviver(key, value) {
+	if (value === null) return null;
+	if (Object.getPrototypeOf(value) === Object.prototype) {
+		return new Map(Object.entries(value));
+	}
+	return value;
+}
 exports.checkIPClass = checkIPClass;
 // for A and AAAA records of domain names on public IANA/ICANN internet. For DN42, you may need to allow 172.16.0.0/12 and fd00::/8.
 exports.endpoint_is_private_ip = checkIPClass.bind(null, ['loopback', 'privatenet', 'linklocal', 'special', 'doc']);
@@ -204,3 +211,4 @@ exports.EndpointMap = EndpointMap;
 exports.epm_setattr = epm_setattr;
 exports.epm_apply = epm_apply;
 exports.make_epm_dns_resolver = make_epm_dns_resolver;
+exports.json_map_reviver = json_map_reviver;
