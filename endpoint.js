@@ -1,6 +1,7 @@
 'use strict';
 const ip = require('ip');
 const net = require('net');
+const napi_helpers = require('./napi/napi-helpers.js');
 class Endpoint {
 	constructor () {
 		this.ip_ = 0n;
@@ -376,3 +377,32 @@ exports.addressChomper = function(ipAddress, initialPosition) {
 	};
 	return _result;
 }
+const one = Buffer.allocUnsafe(4);
+/*If you're on big endian, change LE to BE */
+one.writeUInt32LE(1, 0);
+function napi_get_socket(ep) {
+	let options = [{type: 3, level: 0, opt: 24, data: one}];
+	let d = 10;
+	if ((ep.getIPBigInt() >> 32n) === 0xffffn) {
+		d = 2;
+	}
+	let opts = ep.options_map_.get('!napi_connect_opts');
+	if (opts) {
+		if (opts.transparent) {
+			options.push({type: 3, level: 0 /* SOL_IP */, opt: 19 /* IP_TRANSPARENT */, data: one});
+		}
+		if (opts.freebind) {
+			options.push({type: 3, level: 0, opt: 15, data: one});
+		}
+		if (opts.bindtodevice) {
+			options.push({type: 3, level: 1, opt: 25, data: Buffer.from(opts.bindtodevice + "\0")});
+		}
+		if (opts.fwmark) {
+			let b = Buffer.allocUnsafe(4);
+			b.writeUInt32LE(opts.fwmark, 0);
+			options.push({type: 3, level: 1, opt: 36, data: b});
+		}
+	}
+	return new net.Socket({fd:napi_helpers.make_socket(d, 1, 0, options)});
+}
+exports.napi_get_socket = napi_get_socket;

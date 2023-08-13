@@ -1,6 +1,7 @@
 'use strict';
 const net = require('net');
 const fake_dns = require('./fake_dns.js');
+const endpoint = require('./endpoint.js');
 const socks_server = require('./socks_server.js');
 function resolve_dns_dualstack(_domainName, dnsResolver, mode, overrideFunc) {
 	return new Promise((resolve, reject) => {
@@ -192,7 +193,14 @@ function makeIPRewriteDNS(dnsResolver, mode, postIPRewrite, overrideFunc) {
 }
 
 function connFuncDirect(reqAttr) {
-	let s = net.createConnection(reqAttr.__orig_endpoint__ ? reqAttr.__orig_endpoint__.toNCCOptions() : reqAttr);
+	// let s = net.createConnection(reqAttr.__orig_endpoint__ ? reqAttr.__orig_endpoint__.toNCCOptions() : reqAttr);
+	let s = null;
+	if (reqAttr.__orig_endpoint__) {
+		s = endpoint.napi_get_socket(reqAttr.__orig_endpoint__);
+		s.connect(reqAttr.__orig_endpoint__.toNCCOptions());
+	} else {
+		s = net.createConnection(reqAttr);
+	}
 	return {
 		result: s,
 		onSuccess: (func) => s.once('connect', func),
