@@ -57,12 +57,15 @@ static napi_value make_socket(napi_env env, napi_callback_info info) {
 	}
 	goto success;
 report_error:
-	socket_fd = -errno;
+	;int saved_errno = errno;
+	if (socket_fd >= 0) close(socket_fd);
+	socket_fd = -saved_errno;
 success:
 	napi_value result_;
 	if (napi_create_int32(env, socket_fd, &result_) != napi_ok) abort();
 	return result_;
 fail:
+	if (socket_fd >= 0) close(socket_fd);
 	napi_value result;
 	if (napi_get_null(env, &result) != napi_ok) abort();
 	return result;
