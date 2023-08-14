@@ -395,11 +395,11 @@ function napi_get_socket(ep) {
 			options.push({type: 3, level: 0, opt: 15, data: one});
 		}
 		if (opts.bindtodevice) {
-			options.push({type: 3, level: 1, opt: 25, data: Buffer.from(opts.bindtodevice + "\0")});
+			options.push({type: 3, level: 1, opt: 25, data: Buffer.from(String(opts.bindtodevice) + "\0")});
 		}
 		if (opts.fwmark) {
 			let b = Buffer.allocUnsafe(4);
-			b.writeUInt32LE(opts.fwmark, 0);
+			b.writeUInt32LE(Number(opts.fwmark), 0);
 			options.push({type: 3, level: 1, opt: 36, data: b});
 		}
 	}
