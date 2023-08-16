@@ -1,21 +1,58 @@
 'use strict';
 const net = require('net');
-function readFromSocket(socket) {
+function wait_for_events_g(events, bailout) {
 	return new Promise((resolve, reject) => {
-		let state = {done: false};
-		if (!socket.readable) {
-			resolve(null);
+		if (bailout && bailout()) {
+			resolve({obj: null, event: null, args: []});
 			return;
+		}
+		let state = [];
+		function common_end(obj, event_name, ...args) {
+			if (state.length === 0) return;
+			while (state.length) state.pop()();
+			resolve({obj: obj, event: event_name, args: args});
+		}
+		for (let [obj, e] of events) {
+			let listen_func = common_end.bind(null, obj, e);
+			obj.on(e, listen_func);
+			state.push(() => obj.removeListener(e, listen_func));
+		}
+	});
+}
+async function wait_for_events(obj, events, abortsignal) {
+	if (abortsignal) {
+		if (abortsignal.aborted) return {obj: abortsignal, event: 'abort', args: []};
+	}
+	let e = Array.prototype.map.call(events, a => [obj, a]);
+	if (abortsignal) {
+		e.push([abortsignal, 'abort']);
+	} else {
+		abortsignal = {aborted: false};
+	}
+	return await wait_for_events_g(e, () => abortsignal.aborted);
+}
+async function readFromSocket(socket) {
+	//return new Promise((resolve, reject) => {
+	if (true) {
+		if (!socket.readable) {
+			return null;
 		}
 		let b = socket.read();
 		if (b) {
-			resolve(b);
-			return;
+			return b;
 		}
 		if (!socket.readable) {
-			resolve(null);
-			return;
+			return null;
 		}
+		let ac = AbortSignal.timeout(10000);
+		let result = await wait_for_events(socket, ['readable', 'error', 'close', 'end'], ac);
+		if (result.event === 'readable') {
+			return socket.read() || Buffer.from([]);
+		} else {
+			return null;
+		}
+	}
+	/*
 		socket.once('readable', () => {
 			if (state.done) return;
 			state.done = true;
@@ -42,6 +79,7 @@ function readFromSocket(socket) {
 			resolve(null);
 		}, 10000);
 	});
+	*/
 }
 
 /*
