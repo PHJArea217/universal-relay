@@ -2,7 +2,7 @@ async function get_pp2_header(s) {
 	let targetLength = 0;
 	let b = Buffer.from([]);
 	while (true) {
-		let nb = common_promises.readFromSocket(s);
+		let nb = await common_promises.readFromSocket(s);
 		if (!nb) break;
 		b = Buffer.concat(b, nb);
 		if (targetLength === 0) {
@@ -26,7 +26,7 @@ async function get_sni_header(s) {
 	let targetLength = 0;
 	let b = Buffer.from([]);
 	while (true) {
-		let nb = common_promises.readFromSocket(s);
+		let nb = await common_promises.readFromSocket(s);
 		if (!nb) break;
 		b = Buffer.concat(b, nb);
 		if (targetLength === 0) {
