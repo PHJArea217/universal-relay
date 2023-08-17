@@ -35,6 +35,14 @@ function parse_tlv_sequence(buf) {
 		advance: length + 3
 	};
 }
+function parse_tlv_generic(buf, typeLength, lengthLength) {
+	let headerLength = typeLength + lengthLength;
+	if (buf.length < headerLength) return null;
+	let actualLength = lengthLength === 2 ? buf.readUint16BE(typeLength) : buf[typeLength];
+	if ((actualLength + headerLength) > buf.length) return null;
+	return {type: buf.slice(0, typeLength), value: buf.slice(headerLength, headerLength + actualLength), advance: buf.slice(headerLength + actualLength)};
+}
+
 function parse_tlv_multiple(tlv_buf) {
 	let tlv_result ={};
 	while (true) {
@@ -87,9 +95,43 @@ function parse_pp2_header(buf) {
 		result.authority = String(tlv_obj[2]);
 	}
 	if (tlv_obj.hasOwnProperty("32")) {
-		result.ssl = parse_tlv_multiple(tlv_obj[32]);
+		let ssl_buf = tlv_obj[32];
+		result.ssl = {client: ssl_buf[0], verify: ssl_buf.readUint32BE(4)};
+		result.ssl_data = parse_tlv_multiple(ssl_buf.slice(8));
 	}
+	result.tlv = tlv_obj;
 	return result;
+}
+function parse_sni_header(buf) {
+	let h = parse_tlv_generic(buf, 3, 2);
+	if (!h) return null;
+	let ch = parse_tlv_generic(h.value, 2, 2);
+	if (!ch) return null;
+	if (ch.type.readUint16BE(0) !== 0x100) return null;
+	let ch_next = parse_tlv_generic(ch.value.slice(34), 0, 1); // skip past session id
+	if (!ch_next) return null;
+	let ch_next = parse_tlv_generic(ch_next.advance, 0, 2); // cipher suites
+	if (!ch_next) return null;
+	let ch_next = parse_tlv_generic(ch_next.advance, 0, 1); // compression methods
+	if (!ch_next) return null;
+	let ch_next = parse_tlv_generic(ch_next.advance, 0, 2); // extensions
+	if (!ch_next) return null;
+	let ext_buf = ch_next.value;
+	while (true) {
+		let ext = parse_tlv_generic(ext_buf, 2, 2);
+		if (!ext) break;
+		if (ext.type.readUint16BE(0) === 0) {
+			if (ext.value.length >= 2) {
+				let sni_list_length = ext.value.readUint16BE(0);
+				let sni_list = parse_tlv_multiple(ext.value.slice(2, 2+sni_list_length));
+				if (sni_list.hasOwnProperty('0')) {
+					return {"hostname": String(sni_list[0])};
+				}
+			}
+		}
+		ext_buf = ext_buf.advance;
+	}
+	return null;
 }
 async function get_sni_header(s) {
 	let targetLength = 0;
