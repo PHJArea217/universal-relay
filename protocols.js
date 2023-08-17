@@ -110,11 +110,11 @@ function parse_sni_header(buf) {
 	if (ch.type.readUint16BE(0) !== 0x100) return null;
 	let ch_next = parse_tlv_generic(ch.value.slice(34), 0, 1); // skip past session id
 	if (!ch_next) return null;
-	let ch_next = parse_tlv_generic(ch_next.advance, 0, 2); // cipher suites
+	ch_next = parse_tlv_generic(ch_next.advance, 0, 2); // cipher suites
 	if (!ch_next) return null;
-	let ch_next = parse_tlv_generic(ch_next.advance, 0, 1); // compression methods
+	ch_next = parse_tlv_generic(ch_next.advance, 0, 1); // compression methods
 	if (!ch_next) return null;
-	let ch_next = parse_tlv_generic(ch_next.advance, 0, 2); // extensions
+	ch_next = parse_tlv_generic(ch_next.advance, 0, 2); // extensions
 	if (!ch_next) return null;
 	let ext_buf = ch_next.value;
 	while (true) {
@@ -157,5 +157,6 @@ async function get_sni_header(s) {
 	}
 	throw new Error();
 }
-exports.get_pp2_header = get_pp2_header;
-exports.get_sni_header = get_sni_header;
+for (let f in module) if (typeof module[f] === 'function') exports[f] = module[f];
+// exports.get_pp2_header = get_pp2_header;
+// exports.get_sni_header = get_sni_header;
