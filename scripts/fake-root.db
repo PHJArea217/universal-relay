@@ -1,0 +1,5 @@
+; $ORIGIN .
+$TTL 1m
+@ IN SOA localhost localhost (1 100 100 100 100)
+@ IN NS localhost
+* IN A 127.127.127.127
