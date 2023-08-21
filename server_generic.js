@@ -19,7 +19,7 @@ function make_server(connReadPromise, ipRewrite, connPromise) {
 		let connReadAttributes = null;
 		let connOutSuccess = false;
 		try {
-			socket.pause();
+			// socket.pause();
 			try {
 				socket.setKeepAlive(true);
 			} catch (e) {

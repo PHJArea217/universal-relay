@@ -1,15 +1,19 @@
 'use strict';
 const net = require('net');
-function wait_for_events_g(events, bailout) {
+function wait_for_events_g(events, bailout, timeout) {
 	return new Promise((resolve, reject) => {
 		if (bailout && bailout()) {
 			resolve({obj: null, event: null, args: []});
 			return;
 		}
 		let state = [];
+		let state2 = {};
 		function common_end(obj, event_name, ...args) {
 			if (state.length === 0) return;
 			while (state.length) state.pop()();
+			if (state2.hasOwnProperty('ct')) {
+				clearTimeout(state2.ct);
+			}
 			resolve({obj: obj, event: event_name, args: args});
 		}
 		for (let [obj, e] of events) {
@@ -17,9 +21,12 @@ function wait_for_events_g(events, bailout) {
 			obj.on(e, listen_func);
 			state.push(() => obj.removeListener(e, listen_func));
 		}
+		if (timeout) {
+			state2.ct = setTimeout(common_end.bind(null, null, 'timeout'), timeout);
+		}
 	});
 }
-async function wait_for_events(obj, events, abortsignal) {
+async function wait_for_events(obj, events, abortsignal, timeout) {
 	if (abortsignal) {
 		if (abortsignal.aborted) return {obj: abortsignal, event: 'abort', args: []};
 	}
@@ -27,9 +34,9 @@ async function wait_for_events(obj, events, abortsignal) {
 	if (abortsignal) {
 		e.push([abortsignal, 'abort']);
 	} else {
-		abortsignal = {aborted: false};
+		abortsignal = {aborted: false, on: ()=>0, removeListener: ()=>0};
 	}
-	return await wait_for_events_g(e, () => abortsignal.aborted);
+	return await wait_for_events_g(e, () => abortsignal.aborted, timeout);
 }
 async function readFromSocket(socket) {
 	//return new Promise((resolve, reject) => {
@@ -44,8 +51,7 @@ async function readFromSocket(socket) {
 		if (!socket.readable) {
 			return null;
 		}
-		let ac = AbortSignal.timeout(10000);
-		let result = await wait_for_events(socket, ['readable', 'error', 'close', 'end'], ac);
+		let result = await wait_for_events(socket, ['readable', 'error', 'close', 'end'], null, 10000);
 		if (result.event === 'readable') {
 			return socket.read() || Buffer.from([]);
 		} else {

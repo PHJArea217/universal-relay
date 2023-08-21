@@ -6,7 +6,7 @@ async function get_pp2_header(s) {
 	while (true) {
 		let nb = await common_promises.readFromSocket(s);
 		if (!nb) break;
-		b = Buffer.concat(b, nb);
+		b = Buffer.concat([b, nb]);
 		if (targetLength === 0) {
 			if (b.length >= 16) {
 				if (b.readUint32BE(0) !== 0xd0a0d0a) break;
@@ -129,7 +129,7 @@ function parse_sni_header(buf) {
 				}
 			}
 		}
-		ext_buf = ext_buf.advance;
+		ext_buf = ext.advance;
 	}
 	return null;
 }
@@ -139,13 +139,13 @@ async function get_sni_header(s) {
 	while (true) {
 		let nb = await common_promises.readFromSocket(s);
 		if (!nb) break;
-		b = Buffer.concat(b, nb);
+		b = Buffer.concat([b, nb]);
 		if (targetLength === 0) {
 			if (b.length >= 5) {
 				if (b[0] !== 22) break;
 				if (b.readUint16BE(1) !== 0x301) break;
 				targetLength=5+b.readUint16BE(3);
-				if (targetLength > 1024) break;
+				if (targetLength > 4096) break;
 			}
 		}
 		if (targetLength > 0) {
@@ -157,6 +157,10 @@ async function get_sni_header(s) {
 	}
 	throw new Error();
 }
-for (let f in module) if (typeof module[f] === 'function') exports[f] = module[f];
-// exports.get_pp2_header = get_pp2_header;
-// exports.get_sni_header = get_sni_header;
+exports.get_pp2_header = get_pp2_header;
+exports.get_sni_header = get_sni_header;
+exports.parse_pp2_header = parse_pp2_header;
+exports.parse_sni_header = parse_sni_header;
+exports.parse_tlv_generic = parse_tlv_generic;
+exports.parse_tlv_sequence = parse_tlv_sequence;
+exports.parse_tlv_multiple = parse_tlv_multiple;
