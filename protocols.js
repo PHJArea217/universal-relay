@@ -22,7 +22,9 @@ async function get_pp2_header(s) {
 			}
 		}
 	}
-	throw new Error();
+	s.unshift(b);
+	return null;
+	// throw new Error();
 }
 function parse_tlv_sequence(buf) {
 	if (buf.length < 3) return null;
@@ -155,7 +157,9 @@ async function get_sni_header(s) {
 			}
 		}
 	}
-	throw new Error();
+	s.unshift(b);
+	return null;
+	// throw new Error();
 }
 exports.get_pp2_header = get_pp2_header;
 exports.get_sni_header = get_sni_header;
