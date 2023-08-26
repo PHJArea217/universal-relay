@@ -199,6 +199,51 @@ function json_map_reviver(key, value) {
 	}
 	return value;
 }
+class Channel {
+	constructor() {
+		this.ch = [];
+		this.wq = [];
+	}
+	wait() {
+		return new Promise((resolve) => {
+			if (this.ch.length) resolve();
+			else this.wq.push(resolve);
+		});
+	}
+	signal() {
+		if (this.wq.length) {
+			this.wq.shift()();
+			return 1;
+		}
+		return 0;
+	}
+	broadcast() {
+		let l = this.wq.length;
+		if (l) {
+			while (this.wq.length) this.wq.shift()();
+		}
+		return l;
+	}
+	queue(v) {
+		this.ch.push(v);
+		this.broadcast();
+	}
+	async dequeue() {
+		while (this.ch.length === 0) {
+			await this.wait();
+		}
+		return this.ch.shift();
+	}
+	queuem(v, max) {
+		if (this.ch.length < max) this.queue(v);
+	}
+	async getValues() {
+		while (this.ch.length === 0) {
+			await this.wait();
+		}
+		return this.ch;
+	}
+}
 exports.checkIPClass = checkIPClass;
 // for A and AAAA records of domain names on public IANA/ICANN internet. For DN42, you may need to allow 172.16.0.0/12 and fd00::/8.
 exports.endpoint_is_private_ip = checkIPClass.bind(null, ['loopback', 'privatenet', 'linklocal', 'special', 'doc']);
@@ -212,3 +257,4 @@ exports.epm_setattr = epm_setattr;
 exports.epm_apply = epm_apply;
 exports.make_epm_dns_resolver = make_epm_dns_resolver;
 exports.json_map_reviver = json_map_reviver;
+exports.Channel = Channel;
