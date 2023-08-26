@@ -24,7 +24,7 @@ function deleteEntry(state, entry) {
 	state.byIP.delete(entry[1]);
 }
 function pruneOldEntry(state) {
-	let firstEntryDescriptor = state.byDomain[Symbol.iterator].next();
+	let firstEntryDescriptor = state.byDomain[Symbol.iterator]().next();
 	if (!firstEntryDescriptor.done) {
 		let v = firstEntryDescriptor.value;
 		deleteEntry(state, v);

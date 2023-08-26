@@ -7,7 +7,7 @@ class AsyncLRUCache {
 	async compute(k, f) {
 		if (!this.map.has(k)) {
 			if (this.map.size > this.maximum) {
-				let first = this.map[Symbol.iterator].next();
+				let first = this.map[Symbol.iterator]().next();
 				if (!first.done) {
 					first.value[1].future.queue(null);
 					first.value[1].state = 2;
@@ -31,10 +31,15 @@ class AsyncLRUCache {
 					this_obj.state = 2;
 					this_obj.expires = new Date().getTime() + result[1];
 					this_obj.future.queue(result[0]);
+				}).catch((e) => {
+					this_obj.state = 2;
+					this_obj.expires = 0;
+					this_obj.future.queue(null);
 				});
 			}
 		}
-		return await this_obj.future.getValue()[0];
+		let l = await this_obj.future.getValues();
+		return l[0];
 	}
 }
 exports.AsyncLRUCache = AsyncLRUCache;

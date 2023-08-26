@@ -251,7 +251,7 @@ class Endpoint {
 		let result_array = [];
 		for (let r of resolverResult) {
 			if (r instanceof Endpoint) {
-				result_array.push(r);
+				result_array.push(r.clone());
 			} else {
 				result_array.push(cloned_this.clone()[options.ipOnly ? "setIPStringWithScope" : "setDomain"](String(r)));
 			}

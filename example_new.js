@@ -32,7 +32,7 @@ function common_at_trans_ip(ep, s, options) {
 async function common_transparent_handler(ep_, cra, s, options, cad_override) {
 	let ep = ep_.clone();
 	if (options.read_pp2) {
-		let pp2 = my_app.sys_utils.read_pp2(s);
+		let pp2 = await my_app.sys_utils.read_pp2(s);
 		if (pp2 && ('localEndpoint' in pp2)) {
 			ep = pp2.localEndpoint;
 		} else {
@@ -56,9 +56,12 @@ async function common_socks_handler(ep_, cra, s, options) {
 	return await common_at_domain(ep, options);
 }
 // USER CONFIG STARTS HERE
-const my_dns = new dns.Resolver();
-my_dns.setServers(['127.0.0.53']);
-default_options.dns = my_app.dns_he.make_endpoint_resolver(my_dns, 'all', null);
+// const my_dns = new dns.Resolver();
+// my_dns.setServers(['127.0.0.53']);
+// const my_dns_func = my_app.dns_he.make_endpoint_resolver(my_dns, 'all', null);
+const my_dns_func = (d, ds, ep) => my_app.mdns.systemd_resolve(ds, null, true, ep);
+const dns_cache = my_app.dns_he.make_resolver_with_cache(my_dns_func, 100);
+default_options.dns = dns_cache.resolve.bind(dns_cache);
 let socks_server_reinject = my_app.sys_utils.make_server_simple(common_socks_handler, {socks: true}, null, [{}]);
 function cad_override_enable_socks(ep, options) {
 	if (ep.options_map_.get('reinject') === 'socks') {
@@ -87,6 +90,13 @@ trans_ip_override.ip_map.setValueInGroup([(ipv6_prefix << 64n) | 0x5ff7000000000
 		return ep_clone.setIPBigInt(0n).setPort(0);
 	}
 	else if (ep_lower === 1n) {
+		switch (ep.getPort()) {
+			case 80:
+			case 8080:
+				let ep_clone = ep.clone();
+				ep_clone.options_map_.set('!unix_path', '/run/user/1000/nginx-http-helper.sock');
+				return ep_clone.setIPBigInt(0n).setPort(0);
+		}
 		let sni = await my_app.sys_utils.read_sni(s);
 		if (sni && sni.hostname) {
 			return ep.clone().setDomain(sni.hostname);

@@ -99,7 +99,7 @@ function make_resolver_with_cache(orig_func, maximum) {
 	let cache = new async_lru_cache.AsyncLRUCache(maximum);
 	let obj = {cache: cache,
 		resolve: async function(domain_labels, domain_name, ep) {
-			return await this.cache.compute(domain_name,async (k) => [await orig_func(domain_labels, domain_name, ep) || [], 10000]);
+			return (await this.cache.compute(domain_name,async (k) => [await orig_func(domain_labels, domain_name, ep), 10000])) || [];
 		}
 	};
 	return obj;
@@ -208,8 +208,13 @@ function connFuncDirect(reqAttr) {
 	// let s = net.createConnection(reqAttr.__orig_endpoint__ ? reqAttr.__orig_endpoint__.toNCCOptions() : reqAttr);
 	let s = null;
 	if (reqAttr.__orig_endpoint__) {
-		s = endpoint.napi_get_socket(reqAttr.__orig_endpoint__);
-		s.connect(reqAttr.__orig_endpoint__.toNCCOptions());
+		let so = reqAttr.__orig_endpoint__.toNCCOptions();
+		if ("path" in so) {
+			s = net.createConnection(so);
+		} else {
+			s = endpoint.napi_get_socket(reqAttr.__orig_endpoint__);
+			s.connect(so);
+		}
 	} else {
 		s = net.createConnection(reqAttr);
 	}
@@ -354,6 +359,7 @@ function dns_sort(endpoints, options) {
 exports.resolve_dns_dualstack = resolve_dns_dualstack;
 exports.resolve_dns_dualstack2 = function (a, b, c, d) {return resolve_dns_dualstack(d, a, b, c);};
 exports.make_endpoint_resolver = make_endpoint_resolver;
+exports.make_resolver_with_cache = make_resolver_with_cache;
 exports.connect_HE = connect_HE;
 exports.makeIPRewriteDNS = makeIPRewriteDNS;
 exports.connFuncDirect = connFuncDirect;
