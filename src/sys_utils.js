@@ -3,6 +3,7 @@ const transparent_server = require('./transparent_server.js');
 const dns_he = require('./dns_he.js');
 const endpoint = require('./endpoint.js');
 const protocols = require('./protocols.js');
+const server_generic = require('./server_generic.js');
 const net = require('net');
 const fs = require('fs');
 function make_server_simple(f, options_, listen_parameters, extra_args) {

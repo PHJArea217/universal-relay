@@ -45,7 +45,7 @@ function make_server(connReadPromise, ipRewrite, connPromise) {
 			}
 			if (connReadAttributes.socketAcceptor) {
 				/* Intended use case is to connect the incoming connection to some internal function such as an Express app, rather than an external host. connOut might be null. */
-				socket.resume();
+				// socket.resume();
 				connReadAttributes.socketAcceptor(socket);
 				return;
 			}

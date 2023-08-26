@@ -1,8 +1,10 @@
 'use strict';
 const net = require('net');
+const tls = require('tls');
 const fake_dns = require('./fake_dns.js');
 const endpoint = require('./endpoint.js');
 const socks_server = require('./socks_server.js');
+const internal_function = Symbol("u-relay-internal-function");
 function resolve_dns_dualstack(_domainName, dnsResolver, mode, overrideFunc) {
 	return new Promise((resolve, reject) => {
 		let domainNameX = String(_domainName);
@@ -257,6 +259,10 @@ function connFuncSocks(reqAttr) {
 }
 
 async function simple_connect_HE(socket, connReadAttributes) {
+	if (internal_function in connReadAttributes.req) {
+		connReadAttributes.socketAcceptor = connReadAttributes.req[internal_function];
+		return null;
+	}
 	let addOnAbort = (f) => socket.on('close', f);
 	let req_array = Array.isArray(connReadAttributes.req) ? connReadAttributes.req : [connReadAttributes.req];
 	return await connect_HE(req_array, connFuncDirect, addOnAbort, connReadAttributes);
@@ -344,5 +350,6 @@ exports.connFuncDirect = connFuncDirect;
 exports.connFuncDirectTLS = connFuncDirectTLS;
 exports.connFuncSocks = connFuncSocks;
 exports.simple_connect_HE = simple_connect_HE;
+exports.internal_function = internal_function;
 exports.dns_sort = dns_sort;
 exports.dns_sort2 = function (a, b) {return dns_sort(b, a);};

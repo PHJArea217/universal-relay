@@ -1,4 +1,4 @@
-const exports = {
+exports = {
 	app_func: require('./app_func.js'),
 	common_promises: require('./common_promises.js'),
 	dns_he: require('./dns_he.js'),

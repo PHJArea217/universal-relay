@@ -1,0 +1,5 @@
+; $ORIGIN .
+$TTL 1m
+@ IN SOA localhost localhost (1 100 100 100 100)
+@ IN NS localhost
+* IN AAAA fedb:1200:4500:7800:5ff:7000:0:1
