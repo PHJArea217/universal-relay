@@ -28,6 +28,31 @@ function make_server_simple(f, options_, listen_parameters, extra_args) {
 	}
 	return server_obj;
 }
+function make_domain_handler() {
+	/* don't use hasOwnProperty on options, we might inherit from a prototype. */
+	return async function (ep, options) {
+		if (options.special_domain) {
+			let sd_domain = ep.getSubdomainsOf(options.special_domain.getDomain(), 1);
+			if (sd_domain) {
+				let new_ep2 = options.app.special_domain_resolve(sd_domain[0] || 'www', ep);
+				if (!new_ep2) return [];
+				ep = new_ep2;
+			}
+		}
+		let dns_result = [ep.clone()];
+		if (options.dns) {
+			dns_result = await ep.resolveDynamic(options.dns, {ipOnly: true});
+		}
+		let dns_result_filtered = options.dns_filter ? options.dns_filter(dns_result) : dns_result;
+		if (options.dns_sort) {
+			dns_result_filtered = dns_he.dns_sort(dns_result_filtered, options.dns_sort);
+		}
+		return Array.prototype.map.call(dns_result_filtered, (e) => e.toCRAreq());
+	};
+}
+
+
+
 async function read_sni(s) {
 	let sni_header = await protocols.get_sni_header(s);
 	if (!sni_header) return null;
@@ -48,4 +73,9 @@ async function resolve_endpoint(ep, dns_server) {
 	if (!dns_server) return [ep.clone()];
 	return await ep.resolveDynamic(dns_server, {ipOnly: true});
 }
+exports.make_server_simple = make_server_simple;
+exports.make_domain_handler = make_domain_handler;
+exports.read_sni = read_sni;
+exports.read_pp2 = read_pp2;
+exports.resolve_endpoint = resolve_endpoint;
 // TODO WildcardMap like getHostNRThen, getSubdomainsOfThen
