@@ -102,7 +102,7 @@ function apply_groupsub(groupsub_data, string2, ep) {
 	else if (groupsub_data.domain_subst)
 		ep.setDomain(groupsub_data.domain_subst.replaceAll('#', string2));
 	for (let m of ['', '4', '4m', '6']) {
-		if (groupsub_data.hasOwnProperty('bind_addr' + m)) {
+		if (('bind_addr' + m) in groupsub_data) {
 			ep.options_map_.set('!bind_addr' + m, groupsub_data['bind_addr' + m]);
 		}
 	}

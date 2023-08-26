@@ -111,7 +111,7 @@ function connect_HE(req_array, connFunc, addOnAbort, origCRA) {
 			if (req_array.length === 0) return;
 			let current_req = req_array[0];
 			let thisConnFunc = connFunc;
-			if (current_req.hasOwnProperty('__orig_endpoint__')) {
+			if ('__orig_endpoint__' in current_req) {
 				let om = current_req.__orig_endpoint__.options_map_;
 				let cft = om.get("!connFuncType");
 				switch (cft) {
@@ -214,7 +214,7 @@ function connFuncDirectTLS(reqAttr) {
 	if (reqAttr.__orig_endpoint__) {
 		let o = reqAttr.__orig_endpoint__.options_map_.get('!tls_options');
 		if (o) {
-			if (!Object.hasOwn(o, "port")) {
+			if (!("port" in o)) {
 				o = {...o};
 				Object.assign(o, reqAttr.__orig_endpoint__.toNCCOptions());
 			}
@@ -239,7 +239,7 @@ function connFuncSocks(reqAttr) {
 		onSuccess: ((func) => state.success = func),
 		onFailure: ((func) => state.failure = func),
 		abort: () => {
-			if (reqAttr.hasOwnProperty("_conn")) {
+			if (("_conn" in reqAttr)) {
 				reqAttr._conn.destroy();
 			}
 		}
@@ -263,10 +263,10 @@ async function simple_connect_HE(socket, connReadAttributes) {
 }
 function dns_sort(endpoints, options) {
 	options = options || {};
-	let max_ipv4 = Object.hasOwn(options, 'max_ipv4') ? options.max_ipv4 : 3;
-	let max_ipv6 = Object.hasOwn(options, 'max_ipv6') ? options.max_ipv6 : 3;
-	let max_all = Object.hasOwn(options, 'max_all') ? options.max_all : 5;
-	let mode = Object.hasOwn(options, 'mode') ? options.mode : '6_weak';
+	let max_ipv4 = ('max_ipv4' in options) ? options.max_ipv4 : 3;
+	let max_ipv6 = ('max_ipv6' in options) ? options.max_ipv6 : 3;
+	let max_all = ('max_all' in options) ? options.max_all : 5;
+	let mode = ('mode' in options) ? options.mode : '6_weak';
 	let available_ipv4 = [];
 	let available_ipv6 = [];
 	let available_keys = new Map();

@@ -108,7 +108,7 @@ class TransparentHandler {
 		return null;
 	}
 	special_domain_resolve(sd_part, ep) {
-		let sdp = domain_parser.urelay_handle_special_domain_part(sd_part, Object.hasOwn(this.config, 'allow_linklocal') ? this.config.allow_linklocal : true);
+		let sdp = domain_parser.urelay_handle_special_domain_part(sd_part, ('allow_linklocal' in this.config) ? this.config.allow_linklocal : true);
 		if (sdp && sdp[0]) return (ep ? ep.clone() : new endpoint.Endpoint()).setIPStringWithScope(sdp[0]);
 		let ep2 = ep.clone();
 		let a = domain_parser.apply_groupsub_map(this.groupsub_map, sd_part, ep2);

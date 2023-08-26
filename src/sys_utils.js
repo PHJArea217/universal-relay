@@ -16,7 +16,7 @@ function make_server_simple(f, options_, listen_parameters, extra_args) {
 		}
 	}
 	let server = server_generic.make_server(options.socks ? socks_server.socks_server : transparent_server.transparent_server, async (cra, s) => {
-		let ep = Object.prototype.hasOwnProperty.call(options, "forced_endpoint") ? options.forced_endpoint : endpoint.fromCRAreq(cra.req);
+		let ep = ("forced_endpoint" in options) ? options.forced_endpoint : endpoint.fromCRAreq(cra.req);
 		cra.req = await f(ep, cra, s, ...extra_args);
 		return null;
 	}, dns_he.simple_connect_HE);

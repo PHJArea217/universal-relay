@@ -132,7 +132,7 @@ function readFromSocket(socket) {
 function socketConnect(options, destroyOnClose) {
 	return new Promise((resolve, reject) => {
 		let conn = net.createConnection(options);
-		if (Object.hasOwn(options, "port") || Object.hasOwn(options, "path")) {
+		if (("port" in options) || ("path" in options)) {
 			options._conn = conn;
 		}
 		let done = false;

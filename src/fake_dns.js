@@ -216,10 +216,10 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 							do_dummy_hinfo = false;
 							continue;
 						}
-						let fullEntry = e.hasOwnProperty('qtype') ? {
-							qname: e.hasOwnProperty('qname') ? e.qname : qname,
+						let fullEntry = ('qtype' in e) ? {
+							qname: ('qname' in e) ? e.qname : qname,
 							qtype: e.qtype,
-							ttl: e.hasOwnProperty('ttl') ? e.ttl : 60,
+							ttl: ('ttl' in e) ? e.ttl : 60,
 							content: e.content} : {qname: qname, qtype: 'AAAA',
 								ttl: 60, content: e};
 						let a6_synth = false;
@@ -228,7 +228,7 @@ function make_urelay_ip_domain_map(prefix, dns_overrideFunc, options_arg) {
 							a6_synth = true;
 						}
 						if ((qtype === 'ANY') || (qtype === fullEntry.qtype)) {
-							if (a6_synth && e.hasOwnProperty('a6_synth')) {
+							if (a6_synth && ('a6_synth' in e)) {
 								let a6_synth_val = BigInt(e.a6_synth);
 								fullEntry.content = [
 									((prefix >> 48n) & 0xffffn).toString(16),
