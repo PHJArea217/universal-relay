@@ -5,6 +5,7 @@ const fake_dns = require('./fake_dns.js');
 const endpoint = require('./endpoint.js');
 const socks_server = require('./socks_server.js');
 const internal_function = Symbol("u-relay-internal-function");
+const async_lru_cache = require('./async_lru_cache.js');
 function resolve_dns_dualstack(_domainName, dnsResolver, mode, overrideFunc) {
 	return new Promise((resolve, reject) => {
 		let domainNameX = String(_domainName);
@@ -93,6 +94,15 @@ function make_endpoint_resolver(dnsResolver, mode, overrideFunc) {
 	return async function (domain_labels, domain_name, ep) {
 		return await resolve_dns_dualstack(domain_name, dnsResolver, mode, overrideFunc);
 	};
+}
+function make_resolver_with_cache(orig_func, maximum) {
+	let cache = new async_lru_cache.AsyncLRUCache(maximum);
+	let obj = {cache: cache,
+		resolve: async function(domain_labels, domain_name, ep) {
+			return await this.cache.compute(domain_name,async (k) => [await orig_func(domain_labels, domain_name, ep) || [], 10000]);
+		}
+	};
+	return obj;
 }
 function connect_HE(req_array, connFunc, addOnAbort, origCRA) {
 	return new Promise((resolve, reject) => {
