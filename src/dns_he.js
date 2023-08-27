@@ -99,7 +99,12 @@ function make_resolver_with_cache(orig_func, maximum) {
 	let cache = new async_lru_cache.AsyncLRUCache(maximum);
 	let obj = {cache: cache,
 		resolve: async function(domain_labels, domain_name, ep) {
-			return (await this.cache.compute(domain_name,async (k) => [await orig_func(domain_labels, domain_name, ep), 10000])) || [];
+			return (await this.cache.compute(
+				domain_name,
+				async (k) => [Array.prototype.map.call(
+					(await orig_func(domain_labels, domain_name, ep)) || [],
+					e => ((e instanceof endpoint.Endpoint) ? e.getIPString() : String(e))
+				), 10000])) || [];
 		}
 	};
 	return obj;
