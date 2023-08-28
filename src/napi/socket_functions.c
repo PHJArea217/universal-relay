@@ -19,12 +19,19 @@ static napi_value recvmsg_wrapper(napi_env env, napi_callback_info info) {
 		if (napi_get_element(env, arguments[2], i, &b) != napi_ok) goto fail;
 		if (napi_get_buffer_info(env, b, &iov[i].iov_base, &iov[i].iov_len) != napi_ok) goto fail;
 	}
-	struct iovec name;
-	struct iovec cmsg;
-	if (napi_get_buffer_info(env, arguments[1], &name.iov_base, &name.iov_len) != napi_ok) goto fail;
-	if (napi_get_buffer_info(env, arguments[3], &cmsg.iov_base, &cmsg.iov_len) != napi_ok) goto fail;
+	struct iovec name = {NULL, 0};
+	struct iovec cmsg = {NULL, 0};
+	napi_valuetype vt = 0;
+	if (napi_typeof(env, arguments[1], &vt) != napi_ok) goto fail;
+	if (vt == napi_object)
+		if (napi_get_buffer_info(env, arguments[1], &name.iov_base, &name.iov_len) != napi_ok) goto fail;
+	if (napi_typeof(env, arguments[3], &vt) != napi_ok) goto fail;
+	if (vt == napi_object)
+		if (napi_get_buffer_info(env, arguments[3], &cmsg.iov_base, &cmsg.iov_len) != napi_ok) goto fail;
 	msg.msg_name = name.iov_base;
 	msg.msg_namelen = name.iov_len;
+	msg.msg_iov = iov;
+	msg.msg_iovlen = len;
 	msg.msg_control = cmsg.iov_base;
 	msg.msg_controllen = cmsg.iov_len;
 	struct {
@@ -65,12 +72,19 @@ static napi_value sendmsg_wrapper(napi_env env, napi_callback_info info) {
 		if (napi_get_element(env, arguments[2], i, &b) != napi_ok) goto fail;
 		if (napi_get_buffer_info(env, b, &iov[i].iov_base, &iov[i].iov_len) != napi_ok) goto fail;
 	}
-	struct iovec name;
-	struct iovec cmsg;
-	if (napi_get_buffer_info(env, arguments[1], &name.iov_base, &name.iov_len) != napi_ok) goto fail;
-	if (napi_get_buffer_info(env, arguments[3], &cmsg.iov_base, &cmsg.iov_len) != napi_ok) goto fail;
+	struct iovec name = {NULL, 0};
+	struct iovec cmsg = {NULL, 0};
+	napi_valuetype vt = 0;
+	if (napi_typeof(env, arguments[1], &vt) != napi_ok) goto fail;
+	if (vt == napi_object)
+		if (napi_get_buffer_info(env, arguments[1], &name.iov_base, &name.iov_len) != napi_ok) goto fail;
+	if (napi_typeof(env, arguments[3], &vt) != napi_ok) goto fail;
+	if (vt == napi_object)
+		if (napi_get_buffer_info(env, arguments[3], &cmsg.iov_base, &cmsg.iov_len) != napi_ok) goto fail;
 	msg.msg_name = name.iov_base;
 	msg.msg_namelen = name.iov_len;
+	msg.msg_iov = iov;
+	msg.msg_iovlen = len;
 	msg.msg_control = cmsg.iov_base;
 	msg.msg_controllen = cmsg.iov_len;
 	struct {
@@ -93,25 +107,35 @@ static napi_value sendmsg_wrapper(napi_env env, napi_callback_info info) {
 struct my_uv_poll_data {
 	napi_env env;
 	uv_poll_t poll;
-	napi_async_context async_context;
-	napi_value callback_fn;
-	napi_value this;
+	// napi_async_context async_context;
+	napi_ref callback_fn;
+	napi_ref this;
 };
 void data_finalize(napi_env env, void *data, void *hint) {
 	struct my_uv_poll_data *d = data;
 	uv_poll_stop(&d->poll);
-	napi_async_destroy(env, d->async_context);
+	// napi_async_destroy(env, d->async_context);
+	uint32_t refcount = 0;
+	if (napi_reference_unref(env, d->callback_fn, &refcount) != napi_ok) abort();
+	if (refcount == 0) if (napi_delete_reference(env, d->callback_fn) != napi_ok) abort();
+	if (napi_reference_unref(env, d->this, &refcount) != napi_ok) abort();
+	if (refcount == 0) if (napi_delete_reference(env, d->this) != napi_ok) abort();
+	free(d);
 }
 void data_cb(uv_poll_t *va, int status, int events) {
 	struct my_uv_poll_data *v = va->data;
 	napi_value s[2];
 	if (napi_create_int32(v->env, status, &s[0]) != napi_ok) goto fail;
 	if (napi_create_int32(v->env, events, &s[1]) != napi_ok) goto fail;
-
+	napi_value this, cb;
+	if (napi_get_reference_value(v->env, v->this, &this) != napi_ok) goto fail;
+	if (napi_get_reference_value(v->env, v->callback_fn, &cb) != napi_ok) goto fail;
+	if (cb == NULL) goto fail;
+	if (this == NULL) goto fail;
 	napi_value func_retval;
-	napi_status st = napi_make_callback(v->env, v->async_context,
-			v->this,
-			v->callback_fn,
+	napi_status st = napi_make_callback(v->env, NULL,
+			this,
+			cb,
 			2,
 			&s,
 			&func_retval);
@@ -134,9 +158,9 @@ static make_uv_poll_external(napi_env env, napi_callback_info info) {
 	if (retval1) goto uv_fail;
 	data->poll.data = data;
 	data->env = env;
-	data->callback_fn = argv[1];
-	if (napi_async_init(env, /* ??? */, &data->async_context) != napi_ok) goto fail;
-	data->this = this;
+	// if (napi_async_init(env, ???, &data->async_context) != napi_ok) goto fail;
+	if (napi_create_reference(env, argv[1], 1, &data->callback_fn) != napi_ok) goto hard_fail;
+	if (napi_create_reference(env, this, 1, &data->this) != napi_ok) goto hard_fail;
 	napi_value retval;
 	if (napi_create_external(env, data, data_finalize, NULL, &retval) != napi_ok) goto hard_fail;
 	return retval;
