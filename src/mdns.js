@@ -50,8 +50,10 @@ async function systemd_resolve(hostname, simplePath, allow_linklocal_scope, orig
 		let result = [];
 		for (let a of match_result.parameters.addresses) {
 			if ((a.family === 2) || (a.family === 10)) {
-				let ip_address = orig_endpoint.clone().setIPBuffer(Buffer.from(a.address));
-				result.push(ip_address);
+				if (Array.isArray(a.address)) {
+					let ip_address = orig_endpoint.clone().setIPBuffer(Buffer.from(a.address));
+					result.push(ip_address);
+				}
 			}
 		}
 		return result;
