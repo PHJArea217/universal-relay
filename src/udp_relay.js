@@ -33,5 +33,12 @@ function ntp_server(ibuf) {
 	obuf2.writeBigUInt64BE(curTime, 24);
 	return Buffer.concat([ntp_obuf, obuf2]);
 }
+function make_ntp_server_message_bindable(data, rinfo) {
+	try {
+		let o = ntp_server(data);
+		if (o) this.send(o, 0, 48, rinfo.port, rinfo.address);
+	} catch (e) {
+	}
+}
 
 exports.udp_relay = udp_relay;
