@@ -18,4 +18,20 @@ function udp_relay(options) {
 	b.on('error', errorFunc);
 	return {a: a, b: b, errorFunc: errorFunc, a_data: a_data, b_data: b_data};
 }
+function clockTimeToNTP(clockTime_ns) {
+	return ((2208988800000000000n + clockTime_ns) << 32n) / 1000000000n;
+}
+/* XXX: no leap seconds right now */
+let ntp_obuf = Buffer.from([0x24, 1, 6, 0xec /* 2^-20 s */, 0, 0, 0, 0, 0, 0, 0, 1, 0x58, 0x55, 0x2d, 0x52]);
+function ntp_server(ibuf) {
+	if (ibuf.length < 48) return;
+	let obuf2 = Buffer.allocUnsafe(32);
+	let curTime = clockTimeToNTP(BigInt(Date.now() * 1000) * 1000n);
+	obuf2.writeBigUInt64BE(curTime - 1n, 0);
+	obuf2.writeBigUInt64BE(ibuf.readBigUInt64BE(40), 8);
+	obuf2.writeBigUInt64BE(curTime, 16);
+	obuf2.writeBigUInt64BE(curTime, 24);
+	return Buffer.concat([ntp_obuf, obuf2]);
+}
+
 exports.udp_relay = udp_relay;
