@@ -1,6 +1,6 @@
-const crypto = require('node:crypto');
-const fs = require('node:fs');
-const child_process = require('node:child_process');
+const crypto = require('crypto');
+const fs = require('fs');
+const child_process = require('child_process');
 var socketsToDelete = [];
 function spawn_ssh(command, args, options, tempDir) {
 	let randomBuf = crypto.randomBytes(8);

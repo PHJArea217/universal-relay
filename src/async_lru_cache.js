@@ -18,7 +18,7 @@ class AsyncLRUCache {
 		}
 		let this_obj = this.map.get(k);
 		if (this_obj.state === 2) {
-			if (this_obj.expires > (new Date().getTime())) {
+			if (this_obj.expires < (new Date().getTime())) {
 				this_obj = {future: new misc_utils.Channel(), state: 0, expires: 0};
 			}
 		}
