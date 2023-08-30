@@ -12,8 +12,8 @@ function udp_relay(options) {
 	let errorFunc = () => 0;
 	let a_data = relay_data.bind(a, b);
 	let b_data = relay_data.bind(b, a);
-	a.on('data', a_data);
-	b.on('data', b_data);
+	a.on('message', a_data);
+	b.on('message', b_data);
 	a.on('error', errorFunc);
 	b.on('error', errorFunc);
 	return {a: a, b: b, errorFunc: errorFunc, a_data: a_data, b_data: b_data};
