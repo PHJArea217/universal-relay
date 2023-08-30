@@ -28,7 +28,7 @@ async function systemd_resolve(hostname, simplePath, allow_linklocal_scope, orig
 	let simpleConn = await common_promises.socketConnect(simplePath || '/run/systemd/resolve/io.systemd.Resolve', null);
 	let requestJSON = {method: "io.systemd.Resolve.ResolveHostname",parameters: {name: hostname, flags: 0}};
 	simpleConn.write(JSON.stringify(requestJSON));
-	simpleConn.write(new Buffer([0]));
+	simpleConn.write(Buffer.from([0]));
 	let response = [];
 	let continueLoop = true;
 	while (continueLoop) {

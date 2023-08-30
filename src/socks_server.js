@@ -9,19 +9,19 @@ async function socks_server(conn) {
 	let hostString = "";
 	let hostStringLen = 0;
 	let sendError4 = function() {
-		conn.write(new Buffer([0, 0x5b, 0, 0, 0, 0, 0, 0]));
+		conn.write(Buffer.from([0, 0x5b, 0, 0, 0, 0, 0, 0]));
 		conn.destroy();
 	};
 	let sendError5auth = function() {
-		conn.write(new Buffer([5, 255]));
+		conn.write(Buffer.from([5, 255]));
 		conn.destroy();
 	};
 	let sendError5fail = function() {
-		conn.write(new Buffer([5, 1, 0, 1, 0, 0, 0, 0, 0, 0]));
+		conn.write(Buffer.from([5, 1, 0, 1, 0, 0, 0, 0, 0, 0]));
 		conn.destroy();
 	};
 	let sendSuccess5auth = function() {
-		conn.write(new Buffer([5, 0]));
+		conn.write(Buffer.from([5, 0]));
 	};
 	let phase = 0;
 	while (true) {
@@ -166,7 +166,7 @@ async function socks_server(conn) {
 					break;
 				case '5r4':
 				case '5r6':
-					info.req.host = ip.toString(new Buffer(charList));
+					info.req.host = ip.toString(Buffer.from(charList));
 					info.req.type = charList.length > 4 ? 'ipv6' : 'ipv4';
 					state = '5rp';
 					charList = [];
@@ -203,11 +203,11 @@ async function socks_server(conn) {
 		if (phase === 1) {
 			conn.unshift(nextBuf.slice(charsReadE));
 			if (state === '4uc') {
-				info.sendOnAccept = new Buffer([0, 0x5a, 0, 0, 0, 0, 0, 0]);
-				info.sendOnReject = new Buffer([0, 0x5b, 0, 0, 0, 0, 0, 0]);
+				info.sendOnAccept = Buffer.from([0, 0x5a, 0, 0, 0, 0, 0, 0]);
+				info.sendOnReject = Buffer.from([0, 0x5b, 0, 0, 0, 0, 0, 0]);
 			} else {
-				info.sendOnAccept = new Buffer([5, 0, 0, 1, 0, 0, 0, 0, 0, 0]);
-				info.sendOnReject = new Buffer([5, 1, 0, 1, 0, 0, 0, 0, 0, 0]);
+				info.sendOnAccept = Buffer.from([5, 0, 0, 1, 0, 0, 0, 0, 0, 0]);
+				info.sendOnReject = Buffer.from([5, 1, 0, 1, 0, 0, 0, 0, 0, 0]);
 			}
 			// info.req = {host: info.host, port: info.port, type: info.type};
 			return info;
@@ -218,7 +218,7 @@ async function socks_server(conn) {
 function make_socks_client(options) {
 	return async function(origSocket, dest) {
 		let socksClient = await promises_lib.socketConnect(options, origSocket);
-		socksClient.write(new Buffer([5, 1, 0]));
+		socksClient.write(Buffer.from([5, 1, 0]));
 		let state = 'i';
 		let charsLeft = 2;
 		let aBuf = [];
@@ -248,17 +248,17 @@ function make_socks_client(options) {
 							state = 'x';
 							aBuf = [];
 							charsLeft = 5;
-							socksClient.write(new Buffer([5, 1, 0]));
+							socksClient.write(Buffer.from([5, 1, 0]));
 							switch (dest.req.type) {
 								case 'ipv4':
 								case 'ipv6':
 									let ipBuffer = ip.toBuffer(dest.req.host);
 									switch (ipBuffer.length) {
 										case 4:
-											socksClient.write(new Buffer([1]));
+											socksClient.write(Buffer.from([1]));
 											break;
 										case 16:
-											socksClient.write(new Buffer([4]));
+											socksClient.write(Buffer.from([4]));
 											break;
 										default:
 											throw new Error();
@@ -269,14 +269,14 @@ function make_socks_client(options) {
 								case 'domain':
 									let sl = dest.req.host.length;
 									if (sl > 255) throw new Error();
-									socksClient.write(new Buffer([3, sl]));
+									socksClient.write(Buffer.from([3, sl]));
 									socksClient.write(dest.req.host);
 									break;
 								default:
 									throw new Error();
 									break;
 							}
-							socksClient.write(new Buffer([dest.req.port >> 8, dest.req.port & 0xff]));
+							socksClient.write(Buffer.from([dest.req.port >> 8, dest.req.port & 0xff]));
 						} else {
 							throw new Error();
 						}
