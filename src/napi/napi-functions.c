@@ -61,7 +61,7 @@ report_error:
 	if (socket_fd >= 0) close(socket_fd);
 	socket_fd = -saved_errno;
 success:
-	napi_value result_;
+	;napi_value result_;
 	if (napi_create_int32(env, socket_fd, &result_) != napi_ok) abort();
 	return result_;
 fail:
