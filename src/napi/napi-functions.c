@@ -2,6 +2,7 @@
 #include <sys/socket.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <unistd.h>
 #define check_type(env, value, expectedType) do { \
 	napi_valuetype __t; \
 	napi_status __s = napi_typeof(env, value, &__t); \

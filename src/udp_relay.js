@@ -42,3 +42,5 @@ function make_ntp_server_message_bindable(data, rinfo) {
 }
 
 exports.udp_relay = udp_relay;
+exports.ntp_server = ntp_server;
+exports.make_ntp_server_message_bindable = make_ntp_server_message_bindable;
