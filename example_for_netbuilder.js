@@ -4,6 +4,7 @@
  * is not required to distribute, use, or modify this file. */
 const my_app = require('./src'); // require('/usr/local/lib/u-relay')
 const dns = require('dns');
+const dgram = require('dgram');
 const domain_override = new my_app.misc_utils.EndpointMap();
 const domain_handler = my_app.sys_utils.make_domain_handler();
 const trans_ip_override = new my_app.misc_utils.EndpointMap();

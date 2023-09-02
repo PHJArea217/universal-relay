@@ -14,6 +14,7 @@ exports = {
 	socks_server: require('./socks_server.js'),
 	spawn_ssh: require('./spawn_ssh.js'),
 	sys_utils: require('./sys_utils.js'),
-	transparent_server: require('./transparent_server.js')
+	transparent_server: require('./transparent_server.js'),
+	udp_relay: require('./udp_relay.js')
 };
 module.exports = exports;
