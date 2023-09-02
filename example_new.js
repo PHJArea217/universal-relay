@@ -8,7 +8,7 @@ const domain_override = new my_app.misc_utils.EndpointMap();
 const domain_handler = my_app.sys_utils.make_domain_handler();
 const trans_ip_override = new my_app.misc_utils.EndpointMap();
 /* CONFIG START */
-const ipv6_prefix = 0xfedb120045007800n;
+const ipv6_prefix = BigInt(process.env["NETBUILDER_IPV6_PREFIX_BASE"] || 0) || 0xfedb120045007800n;
 const app = new my_app.app_func.TransparentHandler({
 	prefix: ipv6_prefix, // change as above
 	static_maps: {} // load from JSON file
@@ -61,7 +61,14 @@ async function common_socks_handler(ep_, cra, s, options) {
 // const my_dns_func = my_app.dns_he.make_endpoint_resolver(my_dns, 'all', null);
 const my_dns_func = (d, ds, ep) => my_app.mdns.systemd_resolve(ds, null, true, ep);
 const dns_cache = my_app.dns_he.make_resolver_with_cache(my_dns_func, 100);
+/*
+setInterval(() => {
+	for (let [k, v] of dns_cache.cache.map.entries()) {
+		console.log(k, v.future.ch)
+	}}, 10000);
+	*/
 default_options.dns = dns_cache.resolve.bind(dns_cache);
+default_options.dns_sort = {mode: "6_weak"};
 let socks_server_reinject = my_app.sys_utils.make_server_simple(common_socks_handler, {socks: true}, null, [{}]);
 function cad_override_enable_socks(ep, options) {
 	if (ep.options_map_.get('reinject') === 'socks') {
