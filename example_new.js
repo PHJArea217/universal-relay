@@ -4,6 +4,7 @@
  * is not required to distribute, use, or modify this file. */
 const my_app = require('./src'); // require('/usr/local/lib/u-relay')
 const dns = require('dns');
+const fs = require('fs');
 const domain_override = new my_app.misc_utils.EndpointMap();
 const domain_handler = my_app.sys_utils.make_domain_handler();
 const trans_ip_override = new my_app.misc_utils.EndpointMap();
@@ -70,9 +71,26 @@ setInterval(() => {
 default_options.dns = dns_cache.resolve.bind(dns_cache);
 default_options.dns_sort = {mode: "6_weak"};
 let socks_server_reinject = my_app.sys_utils.make_server_simple(common_socks_handler, {socks: true}, null, [{}]);
+let i_app = make_internal_express_app({ipv6_prefix: ipv6_prefix});
+let i_app_http = http.createServer(i_app);
+// let ssl_options = {cert: fs.readFileSync('i-app_cert.pem'), key: fs.readFileSync('i-app_key.pem')};
+// let i_app_https = https.createServer(ssl_options, i_app);
+let i_app_https = null;
+
 function cad_override_enable_socks(ep, options) {
-	if (ep.options_map_.get('reinject') === 'socks') {
-		return {[my_app.dns_he.internal_function]: (s) => socks_server_reinject.emit('connection', s)};
+	if (ep.options_map_.has('reinject')) {
+		switch (ep.options_map_.get('reinject')) {
+			case 'socks':
+				return {[my_app.dns_he.internal_function]: (s) => socks_server_reinject.emit('connection', s)};
+			case 'i-http':
+				return {[my_app.dns_he.internal_function]: (s) => i_app_http.emit('connection', s)};
+			case 'i-https':
+				if (i_app_https) {
+					return {[my_app.dns_he.internal_function]: (s) => i_app_https.emit('connection', s)};
+				}
+				break;
+		}
+		throw new Error('unrecognized reinject value');
 	}
 	return common_at_domain(ep, options);
 }
@@ -91,10 +109,21 @@ setImmediate(() => {
 });
 trans_ip_override.ip_map.setValueInGroup([(ipv6_prefix << 64n) | 0x5ff700000000000n, 96], async function(ep, s, options) {
 	let ep_lower = ep.getIPBigInt() & 0xffffffffn;
-	if ((ep_lower === 0n) && (ep.getPort() === 1080)) {
-		let ep_clone = ep.clone();
-		ep_clone.options_map_.set('reinject', 'socks');
-		return ep_clone.setIPBigInt(0n).setPort(0);
+	if (ep_lower === 0n) {
+		switch (ep.getPort()) {
+		case 1080:
+			let ep_clone = ep.clone();
+			ep_clone.options_map_.set('reinject', 'socks');
+			return ep_clone.setIPBigInt(0n).setPort(0);
+		case 80:
+			let ep_clone = ep.clone();
+			ep_clone.options_map_.set('reinject', 'i-http');
+			return ep_clone.setIPBigInt(0n).setPort(0);
+		case 443:
+			let ep_clone = ep.clone();
+			ep_clone.options_map_.set('reinject', 'i-https');
+			return ep_clone.setIPBigInt(0n).setPort(0);
+		}
 	}
 	else if (ep_lower === 1n) {
 		switch (ep.getPort()) {
