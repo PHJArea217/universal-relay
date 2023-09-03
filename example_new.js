@@ -5,6 +5,8 @@
 const my_app = require('./src'); // require('/usr/local/lib/u-relay')
 const dns = require('dns');
 const fs = require('fs');
+const http = require('http');
+const https = require('https');
 const domain_override = new my_app.misc_utils.EndpointMap();
 const domain_handler = my_app.sys_utils.make_domain_handler();
 const trans_ip_override = new my_app.misc_utils.EndpointMap();
@@ -110,17 +112,18 @@ setImmediate(() => {
 trans_ip_override.ip_map.setValueInGroup([(ipv6_prefix << 64n) | 0x5ff700000000000n, 96], async function(ep, s, options) {
 	let ep_lower = ep.getIPBigInt() & 0xffffffffn;
 	if (ep_lower === 0n) {
+		let ep_clone = null;
 		switch (ep.getPort()) {
 		case 1080:
-			let ep_clone = ep.clone();
+			ep_clone = ep.clone();
 			ep_clone.options_map_.set('reinject', 'socks');
 			return ep_clone.setIPBigInt(0n).setPort(0);
 		case 80:
-			let ep_clone = ep.clone();
+			ep_clone = ep.clone();
 			ep_clone.options_map_.set('reinject', 'i-http');
 			return ep_clone.setIPBigInt(0n).setPort(0);
 		case 443:
-			let ep_clone = ep.clone();
+			ep_clone = ep.clone();
 			ep_clone.options_map_.set('reinject', 'i-https');
 			return ep_clone.setIPBigInt(0n).setPort(0);
 		}
