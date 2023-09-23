@@ -78,6 +78,21 @@ class TransparentHandler {
 	}
 	transparent_to_domain(iid, port, special_domain_) {
 		let special_domain = special_domain_ || 'u-relay.home.arpa';
+		/* The IPv4 window could rewrite iid to reference another region, so check that first */
+		if ((iid >> 32n) === 0x5ff7007n) {
+			if (this.config.ipv4_handler) {
+				let ipv4_result = this.config.ipv4_handler(iid & 0xffffffffn, port, special_domain);
+				// can be one of null, Endpoint, or [iid, port]
+				if (Array.isArray(ipv4_result)) {
+					iid = ipv4_result[0];
+					port = ipv4_result[1] || port;
+				} else if (typeof ipv4_result === 'object') { // includes null
+					return ipv4_result;
+				} else {
+					return null;
+				}
+			}
+		}
 		let e = new endpoint.Endpoint().setPort(port);
 		let c = endpoint.addressChomper(iid, 64n);
 		switch (c.chomp(16n)) {
@@ -116,4 +131,27 @@ class TransparentHandler {
 		return null;
 	}
 }
+function make_ipv4_handler_bindable(iid, port) {
+	let obj = this || {};
+	let mask = obj.mask || -1n;
+	let match_net = obj.net || 0n;
+	if ((iid & mask) === obj.net) {
+		let iid_lower = iid & 0xffffffffn & (~mask);
+		if (iid_lower === obj.socks_iidl) {
+			let reinject_endpoint = new endpoint.Endpoint();
+			reinject_endpoint.options_map_.set('!intfunc', Object.freeze(['reinject', 0, (port === 1080) ? 'socks' : 'other', port]));
+			return reinject_endpoint;
+		}
+		else if (iid_lower === obj.sni_iidl) {
+			let reinject_endpoint = new endpoint.Endpoint();
+			reinject_endpoint.options_map_.set('!intfunc', Object.freeze(['reinject', 1, [80, 8080].includes(port) ? 'http' : 'tls-sni', port]));
+			return reinject_endpoint;
+		} else {
+			return [obj.new_iid_offset + iid_lower, port];
+		}
+	}
+	return null;
+}
+
 exports.TransparentHandler = TransparentHandler;
+exports.make_ipv4_handler_bindable = make_ipv4_handler_bindable;

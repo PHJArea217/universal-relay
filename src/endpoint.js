@@ -292,6 +292,9 @@ class Endpoint {
 		}
 		let result_object = {};
 		let bind_addr_key = null;
+		if (this.getPort() === 0) {
+			throw new Error("Port is 0. intfunc=" + this.options_map_.get('!intfunc'));
+		}
 		if (this.domain_) {
 			result_object.host = this.getDomainString();
 		} else {
