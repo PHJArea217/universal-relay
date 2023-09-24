@@ -5,6 +5,7 @@ const dns_he = require('./dns_he.js');
 const endpoint = require('./endpoint.js');
 const protocols = require('./protocols.js');
 const server_generic = require('./server_generic.js');
+const udp_relay = require('./udp_relay.js');
 const net = require('net');
 const fs = require('fs');
 function make_server_simple(f, options_, listen_parameters, extra_args) {
@@ -56,7 +57,13 @@ function make_domain_handler() {
 		return Array.prototype.map.call(dns_result_filtered, (e) => e.toCRAreq());
 	};
 }
-
+function make_ntp_server(bind, version) {
+	const ntp = dgram.createSocket('udp' + version);
+	ntp.bind(bind);
+	ntp.on('message', udp_relay.make_ntp_server_message_bindable.bind(ntp));
+	ntp.on('error', () => 0);
+	return ntp;
+}
 
 
 async function read_sni(s) {
@@ -81,6 +88,7 @@ async function resolve_endpoint(ep, dns_server) {
 }
 exports.make_server_simple = make_server_simple;
 exports.make_domain_handler = make_domain_handler;
+exports.make_ntp_server = make_ntp_server;
 exports.read_sni = read_sni;
 exports.read_pp2 = read_pp2;
 exports.resolve_endpoint = resolve_endpoint;

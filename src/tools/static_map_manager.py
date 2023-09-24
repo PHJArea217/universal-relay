@@ -107,6 +107,7 @@ if args.make_list:
         file_json = json.load(open(f, 'r'))
         for e in file_json:
             se = str(e)
+            se = se.split(' ', maxsplit=1)[0]
             if filter_.match(se):
                 print(se)
     sys.exit(0)

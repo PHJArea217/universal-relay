@@ -137,6 +137,13 @@ function main(ctx) {
 		if ('fdenv' in e) listener.listen({fd: +ctx.env[e.fdenv]});
 		else if ('l' in e) listener.listen(e.l);
 	}
+	for (let e of envobj.ntp_listeners || []) {
+		if ('fdenv' in e) {
+			A.sys_utils.make_ntp_server({fd: +ctx.env[e.fdenv]}, e.v);
+		} else {
+			A.sys_utils.make_ntp_server(e.l, e.v);
+		}
+	}
 }
 exports.main = main;
 exports.start_app = start_app;

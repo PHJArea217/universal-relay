@@ -27,7 +27,7 @@ function ntp_server(ibuf) {
 	if (ibuf.length < 48) return;
 	let obuf2 = Buffer.allocUnsafe(32);
 	let curTime = clockTimeToNTP(BigInt(Date.now() * 1000) * 1000n);
-	obuf2.writeBigUInt64BE(curTime - 1n, 0);
+	obuf2.writeBigUInt64BE(curTime & 0xffffff0000000000n, 0);
 	obuf2.writeBigUInt64BE(ibuf.readBigUInt64BE(40), 8);
 	obuf2.writeBigUInt64BE(curTime, 16);
 	obuf2.writeBigUInt64BE(curTime, 24);
