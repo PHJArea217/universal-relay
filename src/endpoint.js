@@ -380,6 +380,7 @@ exports.addressChomper = function(ipAddress, initialPosition) {
 const one = Buffer.allocUnsafe(4);
 /*If you're on big endian, change LE to BE */
 one.writeUInt32LE(1, 0);
+exports.has_napi_get_socket = ('make_socket' in napi_helpers);
 function napi_get_socket(ep) {
 	let options = [{type: 3, level: 0, opt: 24, data: one}];
 	let d = 10;
@@ -402,6 +403,12 @@ function napi_get_socket(ep) {
 			b.writeUInt32LE(Number(opts.fwmark), 0);
 			options.push({type: 3, level: 1, opt: 36, data: b});
 		}
+	}
+	if (!exports.has_napi_get_socket) {
+		if (options.length === 1) {
+			return new net.Socket();
+		}
+		throw new Error("make_socket not implemented, need to compile napi-helpers with node-gyp");
 	}
 	return new net.Socket({fd:napi_helpers.make_socket(d, 1, 0, options)});
 }
