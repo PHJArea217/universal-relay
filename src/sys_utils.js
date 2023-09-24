@@ -1,3 +1,4 @@
+'use strict';
 const socks_server = require('./socks_server.js');
 const transparent_server = require('./transparent_server.js');
 const dns_he = require('./dns_he.js');

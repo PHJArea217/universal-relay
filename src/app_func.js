@@ -5,7 +5,7 @@ const dns_helpers = require('./dns_helpers.js');
 const dns_he = require('./dns_he.js');
 const domain_parser = require('./domain_parser.js');
 const express = require('express');
-const protocols = require('./protocols.js');
+const sys_utils = require('./sys_utils.js');
 class TransparentHandler {
 	constructor(config) {
 		if (config.static_maps) {
@@ -181,7 +181,7 @@ async function handle_reinject_endpoint_bindable(last, ep, s) {
 					}
 					return null;
 				case 'tls-sni':
-					let sni_result = await protocols.read_sni(s);
+					let sni_result = await sys_utils.read_sni(s);
 					if (sni_result) {
 						if (sni_result.hostname) {
 							return new endpoint.Endpoint().setPort(a[3]).setDomain(sni_result.hostname);
@@ -189,7 +189,7 @@ async function handle_reinject_endpoint_bindable(last, ep, s) {
 					}
 					return null;
 				case 'tproxy-real':
-					let pp2_result = await protocols.read_pp2(s);
+					let pp2_result = await sys_utils.read_pp2(s);
 					if (pp2_result) {
 						if (pp2_result.localEndpoint) {
 							return pp2_result.localEndpoint;
@@ -198,7 +198,7 @@ async function handle_reinject_endpoint_bindable(last, ep, s) {
 					return null;
 				case 'tproxy':
 					if (last === 'tproxy') return null;
-					let pp2_result = await protocols.read_pp2(s);
+					let pp2_result = await sys_utils.read_pp2(s);
 					if (pp2_result) {
 						if (pp2_result.localEndpoint) {
 							let lep = pp2_result.localEndpoint;
