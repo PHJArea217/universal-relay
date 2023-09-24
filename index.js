@@ -5,7 +5,7 @@ const fs = require('fs');
 const util = require('util');
 function start_app(env, env2) {
 	const ipv6_prefix = BigInt(env.ipv6_prefix || "0xfedb120045007800");
-	const static_maps = env.static_maps;
+	let static_maps = env.static_maps;
 	if (!static_maps) {
 		if (env.static_maps_file) {
 			static_maps = JSON.parse(fs.readFileSync(env.static_maps_file));
