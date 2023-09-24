@@ -171,7 +171,7 @@ async function handle_reinject_endpoint_bindable(last, ep, s) {
 		if (a[0] === 'reinject') {
 			switch (a[2]) {
 				case 'http-host':
-					return this.nginx_ep.clone() || null;
+					return this.nginx_ep ? this.nginx_ep.clone() : null;
 				case 'socks':
 					if (this.socks_server) {
 						ep.options_map_.set('!reinject_func', (function(sock) {
