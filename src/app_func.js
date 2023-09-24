@@ -211,7 +211,7 @@ async function handle_reinject_endpoint_bindable(last, ep, s) {
 					return null;
 				case 'tproxy':
 					if (last === 'tproxy') return null;
-					let pp2_result = await sys_utils.read_pp2(s);
+					pp2_result = await sys_utils.read_pp2(s);
 					if (pp2_result) {
 						if (pp2_result.localEndpoint) {
 							let lep = pp2_result.localEndpoint;
