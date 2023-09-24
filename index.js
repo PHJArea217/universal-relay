@@ -127,12 +127,15 @@ function main(ctx) {
 		}
 	}
 	const app = start_app(envobj);
-	if ('dns_listen' in envobj) {
+	if ('dns_listen_fdenv' in envobj) {
+		app.app.expressApp.listen({fd: +ctx.env[envobj.dns_listen_fdenv]});
+	} else if ('dns_listen' in envobj) {
 		app.app.expressApp.listen(envobj.dns_listen);
 	}
 	for (let e of envobj.listeners || []) {
 		let listener = app(e.forced_iid ? [BigInt(e.forced_iid[0]), Number(e.forced_iid[1])] : null, e.listener_opts || {});
-		if ('l' in e) listener.listen(e.l);
+		if ('fdenv' in e) listener.listen({fd: +ctx.env[e.fdenv]});
+		else if ('l' in e) listener.listen(e.l);
 	}
 }
 exports.main = main;
