@@ -79,6 +79,7 @@ class TransparentHandler {
 	}
 	transparent_to_domain(iid, port, special_domain_) {
 		let special_domain = special_domain_ || 'u-relay.home.arpa';
+		let tag = {};
 		/* The IPv4 window could rewrite iid to reference another region, so check that first */
 		if ((iid >> 32n) === 0x5ff7007n) {
 			if (this.config.ipv4_handler) {
@@ -87,6 +88,9 @@ class TransparentHandler {
 				if (Array.isArray(ipv4_result)) {
 					iid = ipv4_result[0];
 					port = ipv4_result[1] || port;
+					if ('2' in ipv4_result) {
+						tag.tag = ipv4_result[2];
+					}
 				} else if (typeof ipv4_result === 'object') { // includes null
 					return ipv4_result;
 				} else {
@@ -95,6 +99,7 @@ class TransparentHandler {
 			}
 		}
 		let e = new endpoint.Endpoint().setPort(port);
+		if ('tag' in tag) e.options_map_.set('!intfunc_tag', tag.tag);
 		let c = endpoint.addressChomper(iid, 64n);
 		switch (c.chomp(16n)) {
 			case 0x5fen:
@@ -152,39 +157,47 @@ function make_ipv4_handler_bindable(iid, port) {
 					service = 'tproxy-real';
 					break;
 			}
-			reinject_endpoint.options_map_.set('!intfunc', Object.freeze(['reinject', 0, service, port]));
+			reinject_endpoint.options_map_.set('!intfunc', Object.freeze(['reinject', 0, service, port, obj.tag]));
 			return reinject_endpoint;
 		}
 		else if (iid_lower === obj.sni_iidl) {
 			let reinject_endpoint = new endpoint.Endpoint();
-			reinject_endpoint.options_map_.set('!intfunc', Object.freeze(['reinject', 1, [80, 8080].includes(port) ? 'http-host' : 'tls-sni', port]));
+			reinject_endpoint.options_map_.set('!intfunc', Object.freeze(['reinject', 1, [80, 8080].includes(port) ? 'http-host' : 'tls-sni', port, obj.tag]));
 			return reinject_endpoint;
 		} else {
-			return [obj.new_iid_offset + iid_lower, port];
+			return [obj.new_iid_offset + iid_lower, port, obj.tag];
 		}
 	}
 	return null;
 }
 async function handle_reinject_endpoint_bindable(last, ep, s) {
 	let a = ep.options_map_.get('!intfunc');
+	function set_tag(_ep) {
+		_ep.options_map_.set('!intfunc_tag', a[4]);
+		return _ep;
+	}
 	if (a) {
 		if (a[0] === 'reinject') {
 			switch (a[2]) {
 				case 'http-host':
-					return this.nginx_ep ? this.nginx_ep.clone() : null;
+					return this.nginx_ep ? set_tag(this.nginx_ep.clone()) : null;
 				case 'socks':
-					if (this.socks_server) {
+					let ss = this.socks_server;
+					if (this.socks_server_by_tag) {
+						ss = Object.prototype.hasOwnProperty.call(this.socks_server_by_tag, a[4]) ? this.socks_server_by_tag[a[4]] : this.socks_server;
+					}
+					if (ss) {
 						ep.options_map_.set('!reinject_func', (function(sock) {
 							this.emit('connection', sock);
 						}).bind(this.socks_server));
-						return ep;
+						return set_tag(ep);
 					}
 					return null;
 				case 'tls-sni':
 					let sni_result = await sys_utils.read_sni(s);
 					if (sni_result) {
 						if (sni_result.hostname) {
-							return new endpoint.Endpoint().setPort(a[3]).setDomain(sni_result.hostname);
+							return set_tag(new endpoint.Endpoint().setPort(a[3]).setDomain(sni_result.hostname));
 						}
 					}
 					return null;
@@ -192,7 +205,7 @@ async function handle_reinject_endpoint_bindable(last, ep, s) {
 					let pp2_result = await sys_utils.read_pp2(s);
 					if (pp2_result) {
 						if (pp2_result.localEndpoint) {
-							return pp2_result.localEndpoint;
+							return set_tag(pp2_result.localEndpoint);
 						}
 					}
 					return null;
