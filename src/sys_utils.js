@@ -32,6 +32,10 @@ function make_server_simple(f, options_, listen_parameters, extra_args) {
 function make_domain_handler() {
 	/* don't use hasOwnProperty on options, we might inherit from a prototype. */
 	return async function (ep, options) {
+		let bypass = ep.options_map_.get('!reinject_func');
+		if (typeof bypass === 'function') {
+			return {[dns_he.internal_function]: bypass};
+		}
 		if (options.special_domain) {
 			let sd_domain = ep.getSubdomainsOf(options.special_domain.getDomain(), 1);
 			if (sd_domain) {

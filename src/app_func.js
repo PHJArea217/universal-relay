@@ -5,6 +5,7 @@ const dns_helpers = require('./dns_helpers.js');
 const dns_he = require('./dns_he.js');
 const domain_parser = require('./domain_parser.js');
 const express = require('express');
+const protocols = require('./protocols.js');
 class TransparentHandler {
 	constructor(config) {
 		if (config.static_maps) {
@@ -139,12 +140,24 @@ function make_ipv4_handler_bindable(iid, port) {
 		let iid_lower = iid & 0xffffffffn & (~mask);
 		if (iid_lower === obj.socks_iidl) {
 			let reinject_endpoint = new endpoint.Endpoint();
-			reinject_endpoint.options_map_.set('!intfunc', Object.freeze(['reinject', 0, (port === 1080) ? 'socks' : 'other', port]));
+			let service = 'other';
+			switch (port) {
+				case 1080:
+					service = 'socks';
+					break;
+				case 8081:
+					service = 'tproxy';
+					break;
+				case 8082:
+					service = 'tproxy-real';
+					break;
+			}
+			reinject_endpoint.options_map_.set('!intfunc', Object.freeze(['reinject', 0, service, port]));
 			return reinject_endpoint;
 		}
 		else if (iid_lower === obj.sni_iidl) {
 			let reinject_endpoint = new endpoint.Endpoint();
-			reinject_endpoint.options_map_.set('!intfunc', Object.freeze(['reinject', 1, [80, 8080].includes(port) ? 'http' : 'tls-sni', port]));
+			reinject_endpoint.options_map_.set('!intfunc', Object.freeze(['reinject', 1, [80, 8080].includes(port) ? 'http-host' : 'tls-sni', port]));
 			return reinject_endpoint;
 		} else {
 			return [obj.new_iid_offset + iid_lower, port];
@@ -152,6 +165,69 @@ function make_ipv4_handler_bindable(iid, port) {
 	}
 	return null;
 }
+async function handle_reinject_endpoint_bindable(last, ep, s) {
+	let a = ep.options_map_.get('!intfunc');
+	if (a) {
+		if (a[0] === 'reinject') {
+			switch (a[2]) {
+				case 'http-host':
+					return this.nginx_ep.clone() || null;
+				case 'socks':
+					if (this.socks_server) {
+						ep.options_map_.set('!reinject_func', (function(sock) {
+							this.emit('connection', sock);
+						}).bind(this.socks_server));
+						return ep;
+					}
+					return null;
+				case 'tls-sni':
+					let sni_result = await protocols.read_sni(s);
+					if (sni_result) {
+						if (sni_result.hostname) {
+							return new endpoint.Endpoint().setPort(a[3]).setDomain(sni_result.hostname);
+						}
+					}
+					return null;
+				case 'tproxy-real':
+					let pp2_result = await protocols.read_pp2(s);
+					if (pp2_result) {
+						if (pp2_result.localEndpoint) {
+							return pp2_result.localEndpoint;
+						}
+					}
+					return null;
+				case 'tproxy':
+					if (last === 'tproxy') return null;
+					let pp2_result = await protocols.read_pp2(s);
+					if (pp2_result) {
+						if (pp2_result.localEndpoint) {
+							let lep = pp2_result.localEndpoint;
+							return [lep.getIPBigInt() & 0xffffffffffffffffn, lep.getPort(), 'tproxy'];
+						}
+					}
+					return null;
+			}
+			return null;
+		}
+	}
+	return ep;
+}
 
+
+async function handle_reinject_loop(app, c, s, iid, port, special_domain) {
+	let curr = [iid, port, null];
+	while (true) {
+		let ttd_result = app.transparent_to_domain(curr[0], curr[1], special_domain);
+		if (!(ttd_result instanceof endpoint.Endpoint)) return ttd_result;
+		let reinject_result = await handle_reinject_endpoint_bindable.call(c, curr[2], ttd_result, s);
+		if (Array.isArray(reinject_result)) {
+			curr = reinject_result;
+			continue;
+		}
+		return reinject_result;
+	}
+}
 exports.TransparentHandler = TransparentHandler;
 exports.make_ipv4_handler_bindable = make_ipv4_handler_bindable;
+exports.handle_reinject_loop = handle_reinject_loop;
+exports.handle_reinject_endpoint_bindable = handle_reinject_endpoint_bindable;
