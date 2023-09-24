@@ -82,14 +82,14 @@ function start_app(env, env2) {
 	return result;
 }
 function main(ctx) {
-	let args = util.parseArgs(ctx.argv.slice(2), {
+	let args = util.parseArgs({args: ctx.argv.slice(2), options: {
 		'opt': {'type': 'string', 'multiple': true, 'short': 'o'},
 		'optjson': {'type': 'string', 'multiple': true, 'short': 'O'},
 		'append': {'type': 'string', 'multiple': true, 'short': 'a'},
 		'env': {'type': 'string', 'short': 'e', 'default': ""},
 		'envenv': {'type': 'string', 'short': 'E', 'default': ""},
 		'envfile': {'type': 'string', 'short': 'f', 'default': ""}
-	});
+	}});
 	let envobj = Object.create(null);
 	let ienv = {};
 	if (args.values.envfile) {
