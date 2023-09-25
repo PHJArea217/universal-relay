@@ -48,7 +48,8 @@ function start_app(env, env2) {
 		},
 		app: app,
 		special_domain: new A.endpoint.Endpoint().setDomain("u-relay.home.arpa"),
-		dns: dns_cache_resolve
+		dns: dns_cache_resolve,
+		dns_sort: env.dns_sort || {"mode": "6_weak"}
 	};
 	const domain_handler = A.sys_utils.make_domain_handler();
 	async function common_at_domain(ep) {
