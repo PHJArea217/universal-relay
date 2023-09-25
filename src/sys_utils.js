@@ -51,7 +51,7 @@ function make_domain_handler() {
 		if (options.dns) {
 			dns_result = await ep.resolveDynamic(options.dns, {ipOnly: true});
 		}
-		let dns_result_filtered = options.dns_filter ? options.dns_filter(dns_result, ep) : dns_result;
+		let dns_result_filtered = options.dns_filter ? options.dns_filter(dns_result, ep, options.dns_filter_tag) : dns_result;
 		if (options.dns_sort) {
 			dns_result_filtered = dns_he.dns_sort(dns_result_filtered, options.dns_sort);
 		}

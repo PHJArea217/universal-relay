@@ -3,6 +3,7 @@
 const A = require('./src');
 const fs = require('fs');
 const util = require('util');
+const dns = require('dns');
 function start_app(env, env2) {
 	const ipv6_prefix = BigInt(env.ipv6_prefix || "0xfedb120045007800");
 	let static_maps = env.static_maps;
@@ -27,9 +28,55 @@ function start_app(env, env2) {
 			}));
 		}
 	}
-	const dns_raw = (d, ds, ep) => A.mdns.systemd_resolve(ds, null, true, ep);
-	const dns_cache = A.dns_he.make_resolver_with_cache(dns_raw, 100);
-	const dns_cache_resolve = (...a) => dns_cache.resolve(...a);
+	const domain_wcm = new A.misc_utils.EndpointMap();
+	const dns_func_cache = new Map();
+	function get_domain_config(v) {
+		const dnsf = String(v.dns || "");
+		if (dnsf) {
+			if (!dns_func_cache.has(dnsf)) {
+				const dnsf_array = dnsf.split(',');
+				let final_dns = null;
+				switch (dnsf_array[0].split('/')[0]) {
+					case 'libc':
+						final_dns = A.mdns.make_libc_endpoint_resolver({});
+						break;
+					case 'mdns':
+						final_dns = (d, ds, ep) => A.mdns.mdns_resolve(ds, null, true, ep);
+						break;
+					case 'dns':
+						const dns_resolver = new dns.Resolver();
+						dns_resolver.setServers(dnsf_array.slice(1));
+						final_dns = make_endpoint_resolver(dns_resolver, 'all', null);
+						break;
+					case 'systemd':
+						final_dns = (d, ds, ep) => A.mdns.systemd_resolve(ds, null, true, ep);
+						break;
+				}
+				if (!final_dns) throw new Error('Invalid dns type');
+				const dns_cache = A.dns_he.make_resolver_with_cache(final_dns, 100);
+				const dns_cache_resolve = (...a) => dns_cache.resolve(...a);
+				dns_func_cache.set(dnsf, dns_cache_resolve);
+			}
+			this.dns = dns_func_cache.get(dnsf);
+		}
+		/*
+		for (let k of ['', '4', '4m', '6']) {
+			let bk = 'bind_addr' + k;
+			if (bk in v) {
+				this[bk] = String(v[bk]);
+			}
+		}
+		*/
+		for (let s of ['dns_sort', 'dns_filter_tag']) {
+			this[s] = v[s];
+		}
+		return this;
+	}
+	for (let kv of (Array.isArray(env.domain_wcm) ? env.domain_wcm : [])) {
+		if (Array.isArray(kv) && (kv.length === 2)) {
+			domain_wcm.addAll([[kv[0], get_domain_config.call({}, kv[1])]]);
+		}
+	}
 	const app = new A.app_func.TransparentHandler({
 		prefix: ipv6_prefix,
 		static_maps: static_maps,
@@ -42,18 +89,24 @@ function start_app(env, env2) {
 		}
 	});
 	const default_cad_options = {
-		dns_filter: function (dns_array) {
+		dns_filter: function (dns_array, ep, dns_filter_tag) {
 			/* to be filled out by user */
 			return dns_array;
 		},
 		app: app,
 		special_domain: new A.endpoint.Endpoint().setDomain("u-relay.home.arpa"),
-		dns: dns_cache_resolve,
+		dns: get_domain_config.call({}, {dns: 'libc'}).dns,
 		dns_sort: env.dns_sort || {"mode": "6_weak"}
 	};
+	get_domain_config.call(default_cad_options, env.default_domain_config);
 	const domain_handler = A.sys_utils.make_domain_handler();
 	async function common_at_domain(ep) {
-		return domain_handler(ep, default_cad_options);
+		/* if (ep.getDomainString() === 'www.google.com' && ep.getPort() === 443) {
+		 *     return [ep.clone().setIPString('8.8.8.8').toCRAreq()];
+		 * }
+		 */
+		const wcm_result = domain_wcm.getValue(ep);
+		return domain_handler(ep, Object.assign({}, default_cad_options, wcm_result || {}));
 	}
 	const socks_server = A.sys_utils.make_server_simple((ep, cra, s) => common_at_domain(ep), {socks: true}, null, []);
 	const ttd_config = {
