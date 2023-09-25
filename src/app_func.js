@@ -157,12 +157,14 @@ function make_ipv4_handler_bindable(iid, port) {
 					service = 'tproxy-real';
 					break;
 			}
-			reinject_endpoint.options_map_.set('!intfunc', Object.freeze(['reinject', 0, service, port, obj.tag]));
+			reinject_endpoint.options_map_.set('!intfunc', Object.freeze(['reinject', 0, service, port]));
+			reinject_endpoint.options_map_.set('!intfunc_tag', obj.tag);
 			return reinject_endpoint;
 		}
 		else if (iid_lower === obj.sni_iidl) {
 			let reinject_endpoint = new endpoint.Endpoint();
-			reinject_endpoint.options_map_.set('!intfunc', Object.freeze(['reinject', 1, [80, 8080].includes(port) ? 'http-host' : 'tls-sni', port, obj.tag]));
+			reinject_endpoint.options_map_.set('!intfunc', Object.freeze(['reinject', 1, [80, 8080].includes(port) ? 'http-host' : 'tls-sni', port]));
+			reinject_endpoint.options_map_.set('!intfunc_tag', obj.tag);
 			return reinject_endpoint;
 		} else {
 			return [obj.new_iid_offset + iid_lower, port, obj.tag];
@@ -170,10 +172,11 @@ function make_ipv4_handler_bindable(iid, port) {
 	}
 	return null;
 }
-async function handle_reinject_endpoint_bindable(last, ep, s) {
+async function handle_reinject_endpoint_bindable(last, ep, s, tag) {
 	let a = ep.options_map_.get('!intfunc');
+	let effective_tag = tag || ep.options_map_.get('!intfunc_tag');
 	function set_tag(_ep) {
-		_ep.options_map_.set('!intfunc_tag', a[4]);
+		if (effective_tag) _ep.options_map_.set('!intfunc_tag', effective_tag);
 		return _ep;
 	}
 	if (a) {
@@ -184,7 +187,7 @@ async function handle_reinject_endpoint_bindable(last, ep, s) {
 				case 'socks':
 					let ss = this.socks_server;
 					if (this.socks_server_by_tag) {
-						ss = Object.prototype.hasOwnProperty.call(this.socks_server_by_tag, a[4]) ? this.socks_server_by_tag[a[4]] : this.socks_server;
+						ss = ((typeof effective_tag === 'string') && Object.prototype.hasOwnProperty.call(this.socks_server_by_tag, effective_tag)) ? this.socks_server_by_tag[effective_tag] : this.socks_server;
 					}
 					if (ss) {
 						ep.options_map_.set('!reinject_func', (function(sock) {
@@ -202,20 +205,20 @@ async function handle_reinject_endpoint_bindable(last, ep, s) {
 					}
 					return null;
 				case 'tproxy-real':
-					let pp2_result = await sys_utils.read_pp2(s);
-					if (pp2_result) {
-						if (pp2_result.localEndpoint) {
-							return set_tag(pp2_result.localEndpoint);
+					let pp2_result2 = await sys_utils.read_pp2(s);
+					if (pp2_result2) {
+						if (pp2_result2.localEndpoint) {
+							return set_tag(pp2_result2.localEndpoint);
 						}
 					}
 					return null;
 				case 'tproxy':
 					if (last === 'tproxy') return null;
-					pp2_result = await sys_utils.read_pp2(s);
+					let pp2_result = await sys_utils.read_pp2(s);
 					if (pp2_result) {
 						if (pp2_result.localEndpoint) {
 							let lep = pp2_result.localEndpoint;
-							return [lep.getIPBigInt() & 0xffffffffffffffffn, lep.getPort(), 'tproxy'];
+							return [lep.getIPBigInt() & 0xffffffffffffffffn, lep.getPort(), 'tproxy', effective_tag];
 						}
 					}
 					return null;
@@ -223,16 +226,18 @@ async function handle_reinject_endpoint_bindable(last, ep, s) {
 			return null;
 		}
 	}
-	return ep;
+	return set_tag(ep.clone());
 }
-
-
-async function handle_reinject_loop(app, c, s, iid, port, special_domain) {
-	let curr = [iid, port, null];
+// Order of priority for the resultant endpoint's tag:
+// tag argument to this function (if truthy)
+// curr[3] (set by tproxy intfunc)
+// tag set by handle_reinject_endpoint_bindable (for other internal functions) or transparent_to_domain (for relay_map)
+async function handle_reinject_loop(app, c, s, iid, port, special_domain, tag) {
+	let curr = [iid, port, null, tag];
 	while (true) {
-		let ttd_result = app.transparent_to_domain(curr[0], curr[1], special_domain);
+		let ttd_result = app.transparent_to_domain(curr[0], curr[1], special_domain); // endpoint tag (om !intfunc_tag) not overridden. can return either a normal or reinjective endpoint.
 		if (!(ttd_result instanceof endpoint.Endpoint)) return ttd_result;
-		let reinject_result = await handle_reinject_endpoint_bindable.call(c, curr[2], ttd_result, s);
+		let reinject_result = await handle_reinject_endpoint_bindable.call(c, curr[2], ttd_result, s, curr[3]); // endpoint tag is overridden (forced) if curr[3] is truthy. otherwise, original tag from ttd_result is used.
 		if (Array.isArray(reinject_result)) {
 			curr = reinject_result;
 			continue;
