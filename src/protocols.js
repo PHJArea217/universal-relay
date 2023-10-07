@@ -58,8 +58,9 @@ function parse_tlv_multiple(tlv_buf) {
 }
 
 
-function parse_pp2_header(buf) {
+function parse_pp2_header(buf, options_) {
 	if (buf.length < 16) return null;
+	let options = options_ || {};
 	let mode = buf[12];
 	switch (mode) {
 		case 0x20:
@@ -103,12 +104,24 @@ function parse_pp2_header(buf) {
 			limit = 232;
 			if (buf.length < 232) return null;
 			result.type = 'unix_s';
+			if (options.allow_unix) {
+				result.remoteEndpoint = new endpoint.Endpoint();
+				result.remoteEndpoint.options_map_.set('!unix_path', String(buf.slice(16, 16+108)));
+				result.localEndpoint = new endpoint.Endpoint();
+				result.localEndpoint.options_map_.set('!unix_path', String(buf.slice(16+108, 16+216)));
+			}
 			break;
 	}
 	let tlv_buf = buf.slice(limit);
 	let tlv_obj = parse_tlv_multiple(tlv_buf);
 	if (tlv_obj.hasOwnProperty("2")) {
 		result.authority = String(tlv_obj[2]);
+		if (options.set_sni) {
+			try {
+				result.localEndpoint = result.localEndpoint.clone().setDomain(result.authority);
+			} catch (e) {
+			}
+		}
 	}
 	if (tlv_obj.hasOwnProperty("32")) {
 		let ssl_buf = tlv_obj[32];
@@ -175,6 +188,25 @@ async function get_sni_header(s) {
 	return null;
 	// throw new Error();
 }
+function make_pp2_header(rep, lep, tlv_buf) {
+	let b = Buffer.alloc(216);
+	let rep_buf = rep.getIPBuffer2(true);
+	if (Buffer.isBuffer(rep_buf) && rep_buf.length === 16) {
+		rep_buf.copy(b, 0);
+	}
+	let lep_buf = lep.getIPBuffer2(true);
+	if (Buffer.isBuffer(lep_buf) && lep_buf.length === 16) {
+		lep_buf.copy(b, 16);
+	}
+	b.writeUint16BE(32, rep.getPort());
+	b.writeUint16BE(34, lep.getPort());
+	let final_buf = Buffer.concat([b, tlv_buf || Buffer.from([])]);
+	let i_buf = Buffer.from([13, 10, 13, 10, 0, 13, 10, 0x51, 0x55, 0x49, 0x54, 10, 0x21, 0x21, 0, 0]);
+	i_buf.writeUint16BE(14, final_buf.length);
+	return Buffer.concat([i_buf, final_buf]);
+}
+
+
 exports.get_pp2_header = get_pp2_header;
 exports.get_sni_header = get_sni_header;
 exports.parse_pp2_header = parse_pp2_header;
@@ -182,3 +214,4 @@ exports.parse_sni_header = parse_sni_header;
 exports.parse_tlv_generic = parse_tlv_generic;
 exports.parse_tlv_sequence = parse_tlv_sequence;
 exports.parse_tlv_multiple = parse_tlv_multiple;
+exports.make_pp2_header = make_pp2_header;
