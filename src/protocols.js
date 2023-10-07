@@ -69,11 +69,21 @@ function parse_pp2_header(buf) {
 		default:
 			return null;
 	}
-	if (buf.length < 232) return null;
 	let result = {mode: "proxy", type: "other"};
 	let type = buf[13];
+	/* An earlier implementation of this protocol incorrectly assumed that
+	 * the section which holds the IP addresses and ports was 208 bytes for
+	 * all IP address and unix domain socket families. This was incorrect,
+	 * however, the u-relay-tproxy implementation assumed this too. This
+	 * should not break the u-relay-tproxy implementation because the zero
+	 * bytes at the end can be regarded as empty TLV values, as long as the
+	 * number of padding bytes is a multiple of three, which is the case
+	 * here. */
+	let limit = 232;
 	switch (type) {
 		case 0x11:
+			limit = 28;
+			if (buf.length < 28) return null;
 			result.type = 'tcp4';
 			result.remoteEndpoint = new endpoint.Endpoint();
 			result.remoteEndpoint.setIPBuffer(buf.slice(16, 20)).setPort(buf.readUint16BE(24));
@@ -81,6 +91,8 @@ function parse_pp2_header(buf) {
 			result.localEndpoint.setIPBuffer(buf.slice(20, 24)).setPort(buf.readUint16BE(26));
 			break;
 		case 0x21:
+			limit = 52;
+			if (buf.length < 52) return null;
 			result.type = 'tcp6';
 			result.remoteEndpoint = new endpoint.Endpoint();
 			result.remoteEndpoint.setIPBuffer(buf.slice(16, 32)).setPort(buf.readUint16BE(48));
@@ -88,10 +100,12 @@ function parse_pp2_header(buf) {
 			result.localEndpoint.setIPBuffer(buf.slice(32,48)).setPort(buf.readUint16BE(50));
 			break;
 		case 0x31:
+			limit = 232;
+			if (buf.length < 232) return null;
 			result.type = 'unix_s';
 			break;
 	}
-	let tlv_buf = buf.slice(232);
+	let tlv_buf = buf.slice(limit);
 	let tlv_obj = parse_tlv_multiple(tlv_buf);
 	if (tlv_obj.hasOwnProperty("2")) {
 		result.authority = String(tlv_obj[2]);
