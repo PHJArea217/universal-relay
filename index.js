@@ -114,7 +114,7 @@ function start_app(env, env2) {
 	};
 	async function trans_server(forced_iid_port, ep, cra, s) {
 		let iid_info = forced_iid_port;
-		if (!iid_info) {
+		if (!Array.isArray(iid_info)) {
 			let ep_cra = A.endpoint.fromCRAreq(cra.req);
 			let match_ipv6_prefix = ep_cra.getHostNR(ipv6_prefix << 64n, 64);
 			let match_ipv4 = ep_cra.getHostNR(0xffff00000000n, 96);
@@ -128,8 +128,28 @@ function start_app(env, env2) {
 		if (!ttd_result) throw new Error();
 		return await common_at_domain(ttd_result);
 	}
+	async function trans_server_wild(options, ep, cra, s) {
+		let ep_cra = A.endpoint.fromCRAreq(cra.req);
+		let ep_ip = ep_cra.getIPBigInt();
+		let ep_ip_hi = ep_ip >> 64n;
+		let ep_ip_lo = ep_ip & 0xffff_ffff_ffff_ffffn;
+		if (!ep_ip_hi) {
+			if ((ep_ip_lo >> 32n) === 0xffffn) {
+				ep_ip_lo &= 0xffff_ffffn;
+			} else {
+				throw new Error();
+			}
+		}
+		let iid_info = [ep_ip_lo, ep_cra.getPort()];
+		const ttd_result = await A.app_func.handle_reinject_loop(app, ttd_config, s, iid_info[0], iid_info[1]);
+		if (!ttd_result) throw new Error();
+		return await common_at_domain(ttd_result);
+	}
 	// const main_server = A.sys_utils.make_server_simple(trans_server.bind(null, null), {forced_endpoint: null}, env2.listen_main, []);
 	let result = function(forced_iid, extra_opts) {
+		if (forced_iid === 'wild') {
+			return A.sys_utils.make_server_simple(trans_server_wild.bind(null, null), {forced_endpoint: null, ...extra_opts}, null, []);
+		}
 		return A.sys_utils.make_server_simple(trans_server.bind(null, forced_iid), {forced_endpoint: null, ...extra_opts}, null, []);
 	}
 	result.app = app;
