@@ -136,6 +136,7 @@ function start_app(env, env2) {
 		if (!ep_ip_hi) {
 			if ((ep_ip_lo >> 32n) === 0xffffn) {
 				ep_ip_lo &= 0xffff_ffffn;
+				ep_ip_lo |= 0x5ff700700000000n;
 			} else {
 				throw new Error();
 			}
@@ -207,7 +208,7 @@ function main(ctx) {
 		app.app.expressApp.listen(envobj.dns_listen);
 	}
 	for (let e of envobj.listeners || []) {
-		let listener = app(e.forced_iid ? [BigInt(e.forced_iid[0]), Number(e.forced_iid[1])] : null, e.listener_opts || {});
+		let listener = app(Array.isArray(e.forced_iid) ? [BigInt(e.forced_iid[0]), Number(e.forced_iid[1])] : (e.forced_iid || null), e.listener_opts || {});
 		if ('fdenv' in e) listener.listen({fd: +ctx.env[e.fdenv]});
 		else if ('l' in e) listener.listen(e.l);
 	}
