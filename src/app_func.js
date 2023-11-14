@@ -6,6 +6,8 @@ const dns_he = require('./dns_he.js');
 const domain_parser = require('./domain_parser.js');
 const express = require('express');
 const sys_utils = require('./sys_utils.js');
+const http = require('http');
+const https = require('https');
 class TransparentHandler {
 	constructor(config) {
 		if (config.static_maps) {
@@ -28,6 +30,11 @@ class TransparentHandler {
 		let app = express();
 		this.ip_domain_map.make_pdns_express_app(app, this, false);
 		this.expressApp = app;
+		this.web_app = express();
+		this.web_app_http = http.createServer(this.web_app);
+		if (config.https_options) {
+			this.web_app_https = https.createServer(config.https_options, this.web_app);
+		}
 	}
 	dns_resolve(ep) {
 		let result = [];
@@ -147,6 +154,12 @@ function make_ipv4_handler_bindable(iid, port) {
 			let reinject_endpoint = new endpoint.Endpoint();
 			let service = 'other';
 			switch (port) {
+				case 80:
+					service = 'int-http';
+					break;
+				case 443:
+					service = 'int-https';
+					break;
 				case 1080:
 					service = 'socks';
 					break;
@@ -172,7 +185,7 @@ function make_ipv4_handler_bindable(iid, port) {
 	}
 	return null;
 }
-async function handle_reinject_endpoint_bindable(last, ep, s, tag) {
+async function handle_reinject_endpoint_bindable(last, ep, s, tag, app_) {
 	let a = ep.options_map_.get('!intfunc');
 	let effective_tag = tag || ep.options_map_.get('!intfunc_tag');
 	function set_tag(_ep) {
@@ -182,6 +195,26 @@ async function handle_reinject_endpoint_bindable(last, ep, s, tag) {
 	if (a) {
 		if (a[0] === 'reinject') {
 			switch (a[2]) {
+				case 'int-http':
+					if (app_) {
+						if (app_.web_app_http) {
+							ep.options_map_.set('!reinject_func', (function(sock) {
+								this.emit('connection', sock);
+							}).bind(app_.web_app_http));
+							return set_tag(ep);
+						}
+					}
+					break;
+				case 'int-https':
+					if (app_) {
+						if (app_.web_app_https) {
+							ep.options_map_.set('!reinject_func', (function(sock) {
+								this.emit('connection', sock);
+							}).bind(app_.web_app_https));
+							return set_tag(ep);
+						}
+					}
+					break;
 				case 'http-host':
 					return this.nginx_ep ? set_tag(this.nginx_ep.clone()) : null;
 				case 'socks':
@@ -237,7 +270,7 @@ async function handle_reinject_loop(app, c, s, iid, port, special_domain, tag) {
 	while (true) {
 		let ttd_result = app.transparent_to_domain(curr[0], curr[1], special_domain); // endpoint tag (om !intfunc_tag) not overridden. can return either a normal or reinjective endpoint.
 		if (!(ttd_result instanceof endpoint.Endpoint)) return ttd_result;
-		let reinject_result = await handle_reinject_endpoint_bindable.call(c, curr[2], ttd_result, s, curr[3]); // endpoint tag is overridden (forced) if curr[3] is truthy. otherwise, original tag from ttd_result is used.
+		let reinject_result = await handle_reinject_endpoint_bindable.call(c, curr[2], ttd_result, s, curr[3], app); // endpoint tag is overridden (forced) if curr[3] is truthy. otherwise, original tag from ttd_result is used.
 		if (Array.isArray(reinject_result)) {
 			curr = reinject_result;
 			continue;
