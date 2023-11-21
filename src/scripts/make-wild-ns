@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+ip netns add "$5"
+ip link add name "$1" type $2
+ip link set dev "$1" netns "$5"
+ip netns exec "$5" sh -c 'ip link set lo up;ip route add local "$3/64" dev lo;ip addr add "$3" dev "$1"; ip link set "$1" up; ip route add 0.0.0.0/0 dev "$1"; ip route add "::/0" dev "$1";ip6tables -t mangle -A PREROUTING -i "$1" -d "$3/64" -j TPROXY --on-ip "::ffff:127.0.0.20" --on-port 1' _ "$1" _ "$3"
+ip netns exec "$5" socketbox -l "::ffff:127.0.0.20" -p1 -t -u u-relay-sb -g u-relay-sb -S "$4"
