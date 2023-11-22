@@ -108,4 +108,5 @@ exports.domain_from_text = function(text) {
 	}
 	return new DomainName(result);
 }
+exports.from_text = exports.domain_from_text;
 exports.DomainName = DomainName;
