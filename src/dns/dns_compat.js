@@ -15,7 +15,7 @@ exports.convert_pdns = function(options, qtype_content) {
 		case 'URELAY-A6-SYNTH':
 			if (options.ipv6_prefix) {
 				v.qtype_class = dns_types.dns_types.AAAA;
-				v.rrdata = [(options.ipv6_prefix << 64n) | (qtype_content.a6_synth & 0xffff_ffff_ffff_ffffn)];
+				v.rrdata = [(options.ipv6_prefix << 64n) | (BigInt(qtype_content.a6_synth) & 0xffff_ffff_ffff_ffffn)];
 				return v;
 			}
 			break;
