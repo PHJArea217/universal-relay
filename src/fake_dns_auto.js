@@ -10,7 +10,7 @@ exports.make_f_pdns_compat = async function(dns_overrideFunc, options, dn, qtype
 					case 'version.bind':
 						return [{
 							qtype_class: dns_types.dns_types.TXT,
-							rrdata: ['Universal Relay DNS server']
+							rrdata: [['Universal Relay DNS server']]
 						}];
 				}
 			}
@@ -25,9 +25,12 @@ exports.make_f_pdns_compat = async function(dns_overrideFunc, options, dn, qtype
 	}
 	let ipv6_prefix = options.ipv6_prefix;
 	if (options.auto_ipv6_prefix) {
-		let sl = endpoint.ofLocal(socket);
-		let v = sl.getIPBigInt() >> 64n;
-		if (v > 0n) ipv6_prefix = v;
+		try {
+			let sl = endpoint.ofLocal(socket);
+			let v = sl.getIPBigInt() >> 64n;
+			if (v > 0n) ipv6_prefix = v;
+		} catch (e) {
+		}
 	}
 	let dof_result = await dns_overrideFunc(domain_ep.getDomain(), domain_ep, [options.dof_arg, null, null, 1, {orig_qname: dn, orig_qtype: qtype_str}]);
 	if (domain_ep.ip_) {
@@ -45,7 +48,7 @@ exports.make_f_pdns_compat = async function(dns_overrideFunc, options, dn, qtype
 				if (typeof v === 'string') {
 					v = {qtype: 'AAAA', content: v};
 				}
-				if (['ANY', v.qtype].includes(qtype_str)) {
+				if (['ANY', (v.qtype === 'URELAY-A6-SYNTH') ? 'AAAA' : v.qtype].includes(qtype_str)) {
 					let vr = dns_compat.convert_pdns({ipv6_prefix: ipv6_prefix}, v);
 					if (vr) r.push(vr);
 				}

@@ -36,7 +36,7 @@ class TransparentHandler {
 		this.ip_domain_map.make_pdns_express_app(app, this, false);
 		this.expressApp = app;
 		this.web_app = express();
-		this.web_app_http = http.createServer(this.web_app);
+		this.web_app_http = http.createServer(config.http_options || {}, this.web_app);
 		if (config.https_options) {
 			this.web_app_https = https.createServer(config.https_options, this.web_app);
 		}
@@ -264,6 +264,8 @@ async function handle_reinject_endpoint_bindable(last, ep, s, tag, app_) {
 					if (app_) {
 						if (app_.web_app_http) {
 							ep.options_map_.set('!reinject_func', (function(sock) {
+								// console.log("HTTP", sock, app_);
+								sock.resume();
 								this.emit('connection', sock);
 							}).bind(app_.web_app_http));
 							return set_tag(ep);
@@ -274,6 +276,7 @@ async function handle_reinject_endpoint_bindable(last, ep, s, tag, app_) {
 					if (app_) {
 						if (app_.web_app_https) {
 							ep.options_map_.set('!reinject_func', (function(sock) {
+								sock.resume();
 								this.emit('connection', sock);
 							}).bind(app_.web_app_https));
 							return set_tag(ep);
