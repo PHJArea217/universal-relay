@@ -50,6 +50,7 @@ int main(int argc, char **argv) {
 			uint16_t flags = ntohs(*(uint16_t *)(&data_buf[2]));
 			if (flags & 0x8000) continue;
 			flags = (flags & 0x7900) | 0x8680;
+			(*(uint16_t *)&data_buf[2]) = htons(flags);
 			memset(&data_buf[4], 0, 8);
 			s = 12;
 		} else {
@@ -95,6 +96,7 @@ int main(int argc, char **argv) {
 				new_cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
 				memcpy(CMSG_DATA(new_cmsg), &info, sizeof(struct in6_pktinfo));
 				mh2.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
+				has_cmsg=1;
 			} else if ((cmsg->cmsg_level == SOL_IP) && (cmsg->cmsg_type == IP_PKTINFO)) {
 				if (cmsg->cmsg_len < sizeof(struct in_pktinfo)) continue;
 				struct in_pktinfo info = {0};
@@ -107,12 +109,14 @@ int main(int argc, char **argv) {
 				new_cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 				memcpy(CMSG_DATA(new_cmsg), &info, sizeof(struct in_pktinfo));
 				mh2.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
+				has_cmsg=1;
 			}
 		}
 		if (!has_cmsg) {
 			mh2.msg_control = NULL;
 			mh2.msg_controllen = 0;
 		}
+		iov_data.iov_len = s;
 		sendmsg(fd, &mh2, 0);
 	}
 fail:
