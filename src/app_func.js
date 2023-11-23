@@ -6,8 +6,13 @@ const dns_he = require('./dns_he.js');
 const domain_parser = require('./domain_parser.js');
 const express = require('express');
 const sys_utils = require('./sys_utils.js');
+const dns_server = require('./dns/dns_server.js');
+const dns_types = require('./dns/dns_types.js');
+const fake_dns_auto = require('./fake_dns_auto.js');
+const domain_name = require('./dns/domain_name.js');
 const http = require('http');
 const https = require('https');
+const net = require('net');
 class TransparentHandler {
 	constructor(config) {
 		if (config.static_maps) {
@@ -34,6 +39,40 @@ class TransparentHandler {
 		this.web_app_http = http.createServer(this.web_app);
 		if (config.https_options) {
 			this.web_app_https = https.createServer(config.https_options, this.web_app);
+		}
+		this.default_options = {
+			ipv6_prefix: config.prefix,
+			auto_ipv6_prefix: true,
+			dof_arg: this,
+			ip_domain_map: this.ip_domain_map
+		};
+		this.dns_ifunc_gen = function(addl_options) {
+			return dns_server.make_simple_ifunc.bind(null,
+				fake_dns_auto.make_f_pdns_compat.bind(null,
+					(d, e, x) => this['dns_overrideFunc'](d, e, x),
+					Object.assign({}, this.default_options, addl_options)
+				),
+				new dns_types.dns_types.SOA(
+					domain_name.from_text('.'),
+					1,
+					60,
+					domain_name.from_text('dns-root.u-relay.home.arpa'),
+					domain_name.from_text('u-relay.peterjin.org'),
+					1,
+					1000,
+					1000,
+					1000,
+					60
+				)
+			);
+		}
+		let default_server = this.dns_ifunc_gen({});
+		this.web_app.use(express.raw({type: 'application/dns-message'}));
+		this.web_app.use('/dns-query', dns_server.make_doh_middleware(default_server));
+		this.dns_tcp = dns_server.make_tcp_server.bind(null, default_server);
+		this.dns_tcp_server = net.createServer(this.dns_tcp);
+		if (config.dns_tls_options) {
+			this.dns_tls_server = tls.createSecureServer(config.dns_tls_options, this.dns_tcp);
 		}
 	}
 	dns_resolve(ep) {
@@ -154,11 +193,17 @@ function make_ipv4_handler_bindable(iid, port) {
 			let reinject_endpoint = new endpoint.Endpoint();
 			let service = 'other';
 			switch (port) {
+				case 53:
+					service = 'dns';
+					break;
 				case 80:
 					service = 'int-http';
 					break;
 				case 443:
 					service = 'int-https';
+					break;
+				case 853:
+					service = 'dnstls';
 					break;
 				case 1080:
 					service = 'socks';
@@ -195,6 +240,26 @@ async function handle_reinject_endpoint_bindable(last, ep, s, tag, app_) {
 	if (a) {
 		if (a[0] === 'reinject') {
 			switch (a[2]) {
+				case 'dns':
+					if (app_) {
+						if (app_.dns_tcp_server) {
+							ep.options_map_.set('!reinject_func', (function(sock) {
+								this.emit('connection', sock);
+							}).bind(app_.dns_tcp_server));
+							return set_tag(ep);
+						}
+					}
+					break;
+				case 'dnstls':
+					if (app_) {
+						if (app_.dns_tls_server) {
+							ep.options_map_.set('!reinject_func', (function(sock) {
+								this.emit('connection', sock);
+							}).bind(app_.dns_tls_server));
+							return set_tag(ep);
+						}
+					}
+					break;
 				case 'int-http':
 					if (app_) {
 						if (app_.web_app_http) {

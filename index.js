@@ -98,6 +98,7 @@ function start_app(env, env2) {
 		dns: get_domain_config.call({}, {dns: 'libc'}).dns,
 		dns_sort: env.dns_sort || {"mode": "6_weak"}
 	};
+	if (!env.default_domain_config) env.default_domain_config = {dns: 'systemd'};
 	get_domain_config.call(default_cad_options, env.default_domain_config);
 	const domain_handler = A.sys_utils.make_domain_handler();
 	async function common_at_domain(ep) {
@@ -177,21 +178,21 @@ function main(ctx) {
 	for (let k of Object.keys(ienv)) {
 		envobj[k] = ienv[k];
 	}
-	for (let oj of args.values.optjson) {
+	for (let oj of args.values.optjson || []) {
 		let key = String(oj);
 		let eq = key.indexOf('=');
 		if (eq >= 0) {
 			envobj[key.substring(0, eq)] = JSON.parse(key.substring(eq+1));
 		}
 	}
-	for (let o of args.values.opt) {
+	for (let o of args.values.opt || []) {
 		let key = String(o);
 		let eq = key.indexOf('=');
 		if (eq >= 0) {
 			envobj[key.substring(0, eq)] = key.substring(eq+1);
 		}
 	}
-	for (let o of args.values.append) {
+	for (let o of args.values.append || []) {
 		let key = String(o);
 		let eq = key.indexOf('=');
 		if (eq >= 0) {

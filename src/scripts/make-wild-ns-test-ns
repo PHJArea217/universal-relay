@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+unshare -r -n -m --propagation=slave sh -eu -c 'ip link set lo up;ip route add local "$3/64" dev lo;ip6tables-nft -t mangle -A PREROUTING -d "$3/64" -p tcp -j TPROXY --on-ip "::ffff:127.0.0.20" --on-port 1
+socketbox -l "::ffff:127.0.0.20" -p1 -t -S "$4" & exec bash' _ "$@"
