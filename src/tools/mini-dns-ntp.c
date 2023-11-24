@@ -12,7 +12,8 @@ int main(int argc, char **argv) {
 	int opt = 0;
 	int mode = 0;
 	int fd = 3;
-	while ((opt = getopt(argc, argv, "dnf:")) > 0) {
+	int set_pktinfo = 0;
+	while ((opt = getopt(argc, argv, "dnf:w")) > 0) {
 		switch (opt) {
 			case 'd':
 				mode = 1;
@@ -23,18 +24,27 @@ int main(int argc, char **argv) {
 			case 'f':
 				fd = atoi(optarg);
 				break;
+			case 'w':
+				set_pktinfo = 1;
+				break;
 			default:
 				fprintf(stderr, "Usage: %s -d (DNS) -n (NTP) -f (file descriptor number)\n", argv[0]);
 				return 1;
 				break;
 		}
 	}
+	if (set_pktinfo) {
+		int one = 1;
+		setsockopt(fd, SOL_IPV6, IPV6_RECVPKTINFO, &one, sizeof(one));
+		one = 1;
+		setsockopt(fd, SOL_IP, IP_PKTINFO, &one, sizeof(one));
+	}
 	while (1) {
 		unsigned char data_buf[64] = {0};
-		unsigned char anc_buf[64] = {0};
+		unsigned char anc_buf[128] = {0};
 		unsigned char rinfo_buf[64] = {0};
 		struct iovec iov_data = {.iov_base=data_buf, .iov_len=sizeof(data_buf)};
-		struct msghdr mh = {.msg_name=rinfo_buf, .msg_namelen=sizeof(rinfo_buf), .msg_iov=&iov_data, .msg_iovlen=1, .msg_control=&rinfo_buf, .msg_controllen=sizeof(rinfo_buf), .msg_flags=0};
+		struct msghdr mh = {.msg_name=rinfo_buf, .msg_namelen=sizeof(rinfo_buf), .msg_iov=&iov_data, .msg_iovlen=1, .msg_control=&anc_buf, .msg_controllen=sizeof(anc_buf), .msg_flags=0};
 		errno = 0;
 		ssize_t s = recvmsg(fd, &mh, 0);
 		if (s <= 0) {
@@ -65,8 +75,8 @@ int main(int argc, char **argv) {
 			data_buf32[1] = 0;
 			data_buf32[2] = htonl(1);
 			data_buf32[3] = htonl(0x58555f52); // XU_R
-			data_buf32[6] = data_buf32[8];
-			data_buf32[7] = data_buf32[9];
+			data_buf32[6] = data_buf32[10];
+			data_buf32[7] = data_buf32[11];
 			struct timespec current_time = {0};
 			if (clock_gettime(CLOCK_REALTIME, &current_time)) continue;
 			uint32_t seconds = current_time.tv_sec + 2208988800U;
@@ -90,26 +100,28 @@ int main(int argc, char **argv) {
 				struct in6_pktinfo *orig_info = CMSG_DATA(cmsg);
 				memcpy(&info.ipi6_addr, &orig_info->ipi6_addr, sizeof(struct in6_addr));
 				info.ipi6_ifindex = orig_info->ipi6_ifindex;
-				struct cmsghdr *new_cmsg = CMSG_FIRSTHDR(&mh);
+				struct cmsghdr *new_cmsg = CMSG_FIRSTHDR(&mh2);
 				new_cmsg->cmsg_level = SOL_IPV6;
 				new_cmsg->cmsg_type = IPV6_PKTINFO;
 				new_cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
 				memcpy(CMSG_DATA(new_cmsg), &info, sizeof(struct in6_pktinfo));
 				mh2.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
 				has_cmsg=1;
+				break;
 			} else if ((cmsg->cmsg_level == SOL_IP) && (cmsg->cmsg_type == IP_PKTINFO)) {
 				if (cmsg->cmsg_len < sizeof(struct in_pktinfo)) continue;
 				struct in_pktinfo info = {0};
 				struct in_pktinfo *orig_info = CMSG_DATA(cmsg);
 				memcpy(&info.ipi_addr, &orig_info->ipi_addr, sizeof(struct in_addr));
 				info.ipi_ifindex = orig_info->ipi_ifindex;
-				struct cmsghdr *new_cmsg = CMSG_FIRSTHDR(&mh);
+				struct cmsghdr *new_cmsg = CMSG_FIRSTHDR(&mh2);
 				new_cmsg->cmsg_level = SOL_IP;
 				new_cmsg->cmsg_type = IP_PKTINFO;
 				new_cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 				memcpy(CMSG_DATA(new_cmsg), &info, sizeof(struct in_pktinfo));
 				mh2.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
 				has_cmsg=1;
+				break;
 			}
 		}
 		if (!has_cmsg) {
