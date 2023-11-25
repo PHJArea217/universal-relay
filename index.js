@@ -68,7 +68,7 @@ function start_app(env, env2) {
 		}
 		*/
 		for (let s of ['dns_sort', 'dns_filter_tag']) {
-			this[s] = v[s];
+			if (s in v) this[s] = v[s];
 		}
 		return this;
 	}
