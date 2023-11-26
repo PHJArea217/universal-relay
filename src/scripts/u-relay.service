@@ -7,3 +7,4 @@ ExecStart=/usr/local/lib/u-relay/test_wild.sh /run/u-relay
 Environment=LD_PRELOAD=/usr/local/lib/libsocketbox-preload.so NODE_ENV=production
 User=u-relay
 Group=u-relay
+NoNewPrivileges=yes
