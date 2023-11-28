@@ -273,7 +273,7 @@ function connFuncSocks(reqAttr, origSocket) {
 			result.result = result_;
 			state.success();
 		}).catch(() => {
-			result.abort();
+			if (typeof result.abort === 'function') result.abort();
 			state.failure();
 		});
 	});
