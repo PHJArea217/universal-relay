@@ -53,6 +53,10 @@ function make_server(connReadPromise, ipRewrite, connPromise) {
 				connOut.setKeepAlive(true);
 			} catch (e) {
 			}
+			if (connOut.destroyed || socket.destroyed) {
+				socket.destroy();
+				connOut.destroy();
+			}
 			socket.resume();
 			connOut.resume();
 			socket.on('close', () => {
