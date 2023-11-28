@@ -54,14 +54,15 @@ function make_server(connReadPromise, ipRewrite, connPromise) {
 			} catch (e) {
 			}
 			if (connOut.destroyed || socket.destroyed) {
-				socket.destroy();
-				connOut.destroy();
+				try {socket.destroy(); } catch (e) {}
+				try {connOut.destroy(); } catch (e) {}
+				return;
 			}
 			socket.resume();
 			connOut.resume();
 			socket.on('close', () => {
-				socket.destroy();
 				connOut.destroy();
+				socket.destroy();
 			});
 			connOut.on('close', () => {
 				socket.destroy();
