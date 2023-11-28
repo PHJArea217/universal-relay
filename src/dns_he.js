@@ -209,7 +209,7 @@ function makeIPRewriteDNS(dnsResolver, mode, postIPRewrite, overrideFunc) {
 	};
 }
 
-function connFuncDirect(reqAttr) {
+function connFuncDirect(reqAttr, origSocket) {
 	// let s = net.createConnection(reqAttr.__orig_endpoint__ ? reqAttr.__orig_endpoint__.toNCCOptions() : reqAttr);
 	let s = null;
 	if (reqAttr.__orig_endpoint__) {
@@ -232,7 +232,7 @@ function connFuncDirect(reqAttr) {
 		}
 	};
 }
-function connFuncDirectTLS(reqAttr) {
+function connFuncDirectTLS(reqAttr, origSocket) {
 	if (reqAttr.__orig_endpoint__) {
 		let o = reqAttr.__orig_endpoint__.options_map_.get('!tls_options');
 		if (o) {
@@ -253,7 +253,7 @@ function connFuncDirectTLS(reqAttr) {
 	}
 	throw new Error("!tls_options not found in reqAttr.__orig_endpoint__");
 }
-function connFuncSocks(reqAttr) {
+function connFuncSocks(reqAttr, origSocket) {
 	let socksPromise = socks_server.make_socks_client(reqAttr.__orig_endpoint__.options_map_.get("!socks_server"));
 	let state = {success: null, failure: null};
 	let result = {
@@ -264,6 +264,7 @@ function connFuncSocks(reqAttr) {
 			if (("_conn" in reqAttr)) {
 				reqAttr._conn.destroy();
 			}
+			reqAttr._connAbort = true;
 		}
 	};
 	process.nextTick(() => {
@@ -272,6 +273,7 @@ function connFuncSocks(reqAttr) {
 			result.result = result_;
 			state.success();
 		}).catch(() => {
+			result.abort();
 			state.failure();
 		});
 	});

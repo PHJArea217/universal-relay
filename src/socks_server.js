@@ -218,6 +218,11 @@ async function socks_server(conn) {
 function make_socks_client(options) {
 	return async function(origSocket, dest) {
 		let socksClient = await promises_lib.socketConnect(options, origSocket);
+		if (dest._connAbort) {
+			socksClient.destroy();
+			throw new Error();
+		}
+		dest._conn = socksClient;
 		socksClient.write(Buffer.from([5, 1, 0]));
 		let state = 'i';
 		let charsLeft = 2;
