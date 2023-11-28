@@ -234,6 +234,10 @@ function make_socks_client(options) {
 				socksClient.destroy();
 				throw new Error();
 			}
+			if (origSocket && (origSocket.destroyed)) {
+				socksClient.destroy();
+				throw new Error();
+			}
 			let i = -1;
 			for (let c of nextBuf) {
 				i++;
