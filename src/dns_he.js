@@ -169,6 +169,7 @@ function connect_HE(req_array, connFunc, addOnAbort, origCRA) {
 					reject();
 					return;
 				}
+				if (typeof conn.abort === 'function') conn.abort();
 				conn.abort = null;
 				setTimeout(tryNewConnection, 200);
 			};
