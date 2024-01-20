@@ -41,7 +41,7 @@ function ep_of(domain_or_ip, port, tag) {
 }
 function handle_relay_map(s, m, o, i2d, v) {
 	let idx = ip_smo(s, m, o, v);
-	let rm_result = i2d.get(idx) || i2d.get(Number(idx));
+	let rm_result = i2d.get(idx) || (Number.isSafeInteger(idx) ? i2d.get(Number(idx)) : null);
 	if (rm_result) return ep_of(rm_result, v[1], v[2]);
 	return null;
 }
@@ -53,4 +53,25 @@ function handle_gs32(v) {
 }
 function handle_gs16(v) {
 	return ep_of(`i-hx-s${ip_smo(16n, 0xffffn, 0n, v)}-${ip_smo(0n, 0xffffn, 0n, v)}.u-relay.home.arpa`, v[1], v[2]);
+}
+function handle_transhe(s, m, o, idm, v) {
+	let idx = ip_smo(s, m, o, v);
+	if (idx < 0n) return null;
+	let map_result = idm.get(idx);
+	if (map_result) return ep_of(map_result, v[1], v[2]);
+	return null;
+}
+function make_static_region_map(options) {
+	const l2_map = new Map([
+		[0x6464n, handle_trans.bind({}, 0n, 0xffffffffn, 0xffff00000000n)],
+		[0x7001n, handle_relay_map.bind({}, 0n, 0xffffffffn, 0n)],
+		[0x7003n, handle_gs16],
+		[0x7007n, /* handle_i4w */]
+	]);
+	const l1_map = new Map([
+		[undefined, handle_transhe.bind({}, 0n, 0xffffffffffffffffn, -0x600_0000_0000_0000n)],
+		[0x5fen, handle_gs32],
+		[0x5ffn, [ip_smo.bind({}, 32n, 0xffffn, 0n), l2_map]]
+	]);
+	return [ip_smo.bind({}, 48n, 0xffffn, 0n), l1_map];
 }
