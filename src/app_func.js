@@ -311,7 +311,7 @@ async function handle_reinject_endpoint_bindable(last, ep, s, tag, app_) {
 						if (pp2_result2.localEndpoint) {
 							if (typeof pp2_result.authority === 'string') {
 								try {
-									let ne = pp2_result.localEndpoint.clone().setDomain(pp2_result.authority);
+									let ne = pp2_result2.localEndpoint.clone().setDomain(pp2_result.authority);
 									return set_tag(ne);
 								} catch (e) {
 									return null;
