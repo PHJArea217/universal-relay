@@ -61,15 +61,30 @@ function handle_transhe(s, m, o, idm, v) {
 	if (map_result) return ep_of(map_result, v[1], v[2]);
 	return null;
 }
+function handle_i4w(options, windows, smo, v, s) {
+	let i = ip_smo(...smo, v);
+	let mask = w.mask || -1n;
+	let net = w.net || 0n;
+	for (let w of windows) {
+		if ((i & mask) === net) {
+			let lower = i & ~mask;
+			if (!w.extended) lower &= 0xffffffffn;
+			if (lower === w.socks_iidl) return handle_i4w_socks(options, [v[0], v[1], w.tag || v[2]], s);
+			else if (lower === w.sni_iidl) return handle_i4w_sni(options, [v[0], v[1], w.tag || v[2]], s);
+			else return {t:2,v:[w.new_iid_offset + lower, v[1], w.tag || v[2]]};
+		}
+	}
+	return null;
+}
 function make_static_region_map(options) {
 	const l2_map = new Map([
 		[0x6464n, handle_trans.bind({}, 0n, 0xffffffffn, 0xffff00000000n)],
-		[0x7001n, handle_relay_map.bind({}, 0n, 0xffffffffn, 0n)],
+		[0x7001n, handle_relay_map.bind({}, 0n, 0xffffffffn, 0n, options.relay_map_i2d)],
 		[0x7003n, handle_gs16],
-		[0x7007n, /* handle_i4w */]
+		[0x7007n, handle_i4w.bind({}, options, options.ipv4_windows, [0n, 0xffffffffn, 0n])]
 	]);
 	const l1_map = new Map([
-		[undefined, handle_transhe.bind({}, 0n, 0xffffffffffffffffn, -0x600_0000_0000_0000n)],
+		[undefined, handle_transhe.bind({}, 0n, 0xffffffffffffffffn, -0x600_0000_0000_0000n, options.transhe_idm)],
 		[0x5fen, handle_gs32],
 		[0x5ffn, [ip_smo.bind({}, 32n, 0xffffn, 0n), l2_map]]
 	]);
