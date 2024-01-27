@@ -26,9 +26,14 @@ exports.make_f_pdns_compat = async function(dns_overrideFunc, options, dn, qtype
 	let ipv6_prefix = options.ipv6_prefix;
 	if (options.auto_ipv6_prefix) {
 		try {
-			let sl = endpoint.ofLocal(socket);
-			let v = sl.getIPBigInt() >> 64n;
-			if (v > 0n) ipv6_prefix = v;
+			let si = sock_info.get_sock_info(socket, false);
+			if (si && si.vi) /* exists and > 0n */{
+				ipv6_prefix = si.vi >> 64n;
+			} else {
+				let sl = endpoint.ofLocal(socket);
+				let v = sl.getIPBigInt() >> 64n;
+				if (v > 0n) ipv6_prefix = v;
+			}
 		} catch (e) {
 		}
 	}
