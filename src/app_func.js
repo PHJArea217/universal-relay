@@ -327,6 +327,8 @@ async function handle_reinject_endpoint_bindable(last, ep, s, tag, app_) {
 					if (pp2_result) {
 						if (pp2_result.localEndpoint) {
 							let lep = pp2_result.localEndpoint;
+							let si = sock_info.get_sock_info(s, true);
+							si.vi = lep.getIPBigInt();
 							return [lep.getIPBigInt() & 0xffffffffffffffffn, lep.getPort(), 'tproxy', effective_tag];
 						}
 					}
