@@ -1,6 +1,7 @@
 const dns_server = require('./dns/dns_server.js');
 const dns_compat = require('./dns/dns_compat.js');
 const dns_types = require('./dns/dns_types.js');
+const sock_info = require('./sock_info.js');
 const endpoint = require('./endpoint.js');
 exports.make_f_pdns_compat = async function(dns_overrideFunc, options, dn, qtype_str, qclass, flags, socket) {
 	if (qclass !== 1) {

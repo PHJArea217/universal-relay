@@ -10,6 +10,7 @@ const dns_server = require('./dns/dns_server.js');
 const dns_types = require('./dns/dns_types.js');
 const fake_dns_auto = require('./fake_dns_auto.js');
 const domain_name = require('./dns/domain_name.js');
+const sock_info = require('./sock_info.js');
 const http = require('http');
 const https = require('https');
 const net = require('net');
