@@ -222,6 +222,9 @@ function connFuncDirect(reqAttr, origSocket) {
 			s.connect(so);
 		}
 	} else {
+		if (reqAttr.port === 9229) {
+			throw new Error('connection to nodejs debug port not allowed');
+		}
 		s = net.createConnection(reqAttr);
 	}
 	return {
@@ -240,6 +243,9 @@ function connFuncDirectTLS(reqAttr, origSocket) {
 			if (!("port" in o)) {
 				o = {...o};
 				Object.assign(o, reqAttr.__orig_endpoint__.toNCCOptions());
+			}
+			if (o.port === 9229) {
+				throw new Error('connection to nodejs debug port not allowed');
 			}
 			let s = tls.connect(o);
 			return {
