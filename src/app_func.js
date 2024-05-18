@@ -215,6 +215,9 @@ function make_ipv4_handler_bindable(iid, port) {
 				case 8082:
 					service = 'tproxy-real';
 					break;
+				case 8083:
+					service = 'tproxy-implicit';
+					break;
 			}
 			reinject_endpoint.options_map_.set('!intfunc', Object.freeze(['reinject', 0, service, port]));
 			reinject_endpoint.options_map_.set('!intfunc_tag', obj.tag);
@@ -329,9 +332,27 @@ async function handle_reinject_endpoint_bindable(last, ep, s, tag, app_) {
 						if (pp2_result.localEndpoint) {
 							let lep = pp2_result.localEndpoint;
 							let si = sock_info.get_sock_info(s, true);
+							let tlvbuf = pp2_result.tlv[0xe0];
+							if (Buffer.isBuffer(tlvbuf)) {
+								if (tlvbuf.length < 27) return null;
+								let ep = new endpoint.Endpoint();
+								ep.setPort(tlvbuf.readUInt16BE(1));
+								if (pp2_result.authority) {
+									ep.setDomain(pp2_result.authority);
+								} else {
+									ep.setIPBuffer(tlvbuf.slice(3, 3+16));
+								}
+								si.ti_data = {ep: ep};
+							}
 							si.vi = lep.getIPBigInt();
 							return [lep.getIPBigInt() & 0xffffffffffffffffn, lep.getPort(), 'tproxy', effective_tag];
 						}
+					}
+					return null;
+				case 'tproxy-implicit':
+					let si = sock_info.get_sock_info(s, false);
+					if (si && si.ti_data) {
+						return set_tag(si.ti_data.ep);
 					}
 					return null;
 			}

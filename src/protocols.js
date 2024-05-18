@@ -73,7 +73,7 @@ function parse_pp2_header(buf, options_) {
 	let result = {mode: "proxy", type: "other"};
 	let type = buf[13];
 	/* An earlier implementation of this protocol incorrectly assumed that
-	 * the section which holds the IP addresses and ports was 208 bytes for
+	 * the section which holds the IP addresses and ports was 216 bytes for
 	 * all IP address and unix domain socket families. This was incorrect,
 	 * however, the u-relay-tproxy implementation assumed this too. This
 	 * should not break the u-relay-tproxy implementation because the zero
