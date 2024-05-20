@@ -1,6 +1,7 @@
 const common_promises = require('./common_promises.js');
 const endpoint = require('./endpoint.js');
-async function get_pp2_header(s) {
+const Reader = require('./reader.js');
+async function get_pp2_header_x(s) {
 	let targetLength = 0;
 	let b = Buffer.from([]);
 	while (true) {
@@ -8,23 +9,72 @@ async function get_pp2_header(s) {
 		if (!nb) break;
 		b = Buffer.concat([b, nb]);
 		if (targetLength === 0) {
-			if (b.length >= 16) {
-				if (b.readUint32BE(0) !== 0xd0a0d0a) break;
-				if (b.readUint32BE(4) !== 0xd0a51) break;
-				if (b.readUint32BE(8) !== 0x5549540a) break;
-				targetLength = 16+b.readUint16BE(14);
+			if (b.length >= 14) {
+				if (b.readUint16BE(0) !== 0xd0a) break;
+				if (b.readUint32BE(2) !== 0xd0a51) break;
+				if (b.readUint32BE(6) !== 0x5549540a) break;
+				targetLength = 14+b.readUint16BE(12);
 			}
 		}
 		if (targetLength > 0) {
 			if (b.length >= targetLength) {
 				s.unshift(b.slice(targetLength));
-				return {buffer: b.slice(0, targetLength)};
+				return {buffer: Buffer.concat([Buffer.from([13, 10]), b.slice(0, targetLength)])};
 			}
 		}
 	}
 	s.unshift(b);
 	return null;
 	// throw new Error();
+}
+async function read_until_empty(s) {
+	let reader = new reader.Reader(4);
+	reader.mode = 2;
+	reader.charToFind = 0x0a /* (newline) */
+	while (true) {
+		let nb = await common_promises.readFromSocket(s);
+		let result = reader.addBuf(nb);
+		if (result) {
+			s.unshift(result.excessBuf);
+			if (result.buf.length === 0) return;
+			if ((result.buf.length === 1) && result.buf[0] === 0x0a) {
+				return;
+			} else if ((result.buf.length === 2) && (result.buf.readUInt16BE(0) === 0x0d0a)) {
+				return;
+			}
+		}
+	}
+}
+async function get_proxy_header(s) {
+	let reader = new reader.Reader(400);
+	reader.mode = 2;
+	reader.charToFind = 0x0a /* (newline) */
+	while (true) {
+		let nb = await common_promises.readFromSocket(s);
+		let result = reader.addBuf(nb);
+		if (result) {
+			s.unshift(result.excessBuf);
+			if ((result.buf.length === 2) && (result.buf.readUInt16BE(0) === 0x0d0a)) {
+				return get_pp2_header_x(s);
+			}
+			let text = result.buf.toString('latin1');
+			if (typeof text === 'string') {
+				let x = text.substring(0, 8).toLowerCase();
+				if (x.startsWith('connect ')) {
+					/* HTTP proxy */
+					await read_until_empty(s);
+					/* Dummy success response */
+					s.write('HTTP/1.1 200 OK\r\nServer: Universal Relay\r\n\r\n');
+					return {string: text};
+				} else if (x.startsWith('proxy ')) {
+					/* PROXY protocol v1 */
+					if (result.buf.length >= 400) return null;
+					return {string: text};
+				}
+			}
+			return null;
+		}
+	}
 }
 function parse_tlv_sequence(buf) {
 	if (buf.length < 3) return null;
@@ -57,7 +107,45 @@ function parse_tlv_multiple(tlv_buf) {
 	return tlv_result;
 }
 
-
+function parse_pp1_or_http_header(str) {
+	let tokens = str.split(' ').flatMap(x => x ? [x.toLowerCase./*rstrip('\r\n')*/] : []);
+	switch (tokens[0]) {
+		case 'connect':
+			let e = new endpoint.Endpoint();
+			if (typeof tokens[1] === 'string') {
+				let host = '';
+				if (tokens[1][0] === '[') {
+					host = tokens[1].substring(1).split(']:');
+				} else {
+					host = tokens[1].split(':');
+				}
+				if (host.length !== 2) return null;
+				e.setDomain(host[0]);
+				e.setPort(Number(host[1]));
+				switch (tokens[2]) {
+					case 'http/1.0':
+					case 'http/1.1':
+						return {localEndpoint: e};
+				}
+			}
+			break;
+		case 'proxy':
+			switch (tokens[1]) {
+				case 'tcp':
+				case 'tcp4':
+				case 'tcp6':
+					let rep = new endpoint.Endpoint();
+					let lep = new endpoint.Endpoint();
+					if (tokens.length < 6) return null;
+					rep.setIPStringWithScope(tokens[2]);
+					lep.setIPStringWithScope(tokens[3]);
+					rep.setPort(Number(tokens[2]));
+					lep.setPort(Number(tokens[3]));
+					return {remoteEndpoint: rep, localEndpoint: lep};
+			}
+	}
+	return null;
+}
 function parse_pp2_header(buf, options_) {
 	if (buf.length < 16) return null;
 	let options = options_ || {};
@@ -207,9 +295,10 @@ function make_pp2_header(rep, lep, tlv_buf) {
 }
 
 
-exports.get_pp2_header = get_pp2_header;
+exports.get_proxy_header = get_proxy_header;
 exports.get_sni_header = get_sni_header;
 exports.parse_pp2_header = parse_pp2_header;
+exports.parse_pp1_or_http_header = parse_pp1_or_http_header;
 exports.parse_sni_header = parse_sni_header;
 exports.parse_tlv_generic = parse_tlv_generic;
 exports.parse_tlv_sequence = parse_tlv_sequence;

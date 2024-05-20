@@ -76,8 +76,11 @@ async function read_sni(s) {
 	return sni_header_data;
 }
 async function read_pp2(s) {
-	let pp2_header = await protocols.get_pp2_header(s);
+	let pp2_header = await protocols.get_proxy_header(s);
 	if (!pp2_header) return null;
+	if (typeof pp2_header.string === 'string') {
+		return protocols.parse_pp1_or_http_header(pp2_header.string) || {};
+	}
 	if (!Buffer.isBuffer(pp2_header.buffer)) return {};
 	let pp2_header_data = protocols.parse_pp2_header(pp2_header.buffer);
 	if (!pp2_header_data) return {};

@@ -7,7 +7,7 @@ be used directly, either as the transparent server or forced_iid.
 
 To be able to set the destination, it is required to provide a Proxy Protocol
 v2 TLV of type 0xe0, of the form:
-struct inner {
+struct u_relay_tlv_0xe0 {
 uint8_t version;
 uint16_t port;
 uint8_t ip[16];
