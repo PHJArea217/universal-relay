@@ -108,7 +108,7 @@ function parse_tlv_multiple(tlv_buf) {
 }
 
 function parse_pp1_or_http_header(str) {
-	let tokens = str.split(' ').flatMap(x => x ? [x.toLowerCase./*rstrip('\r\n')*/] : []);
+	let tokens = str.split(' ').flatMap(x => x ? [x.toLowerCase().trim()] : []);
 	switch (tokens[0]) {
 		case 'connect':
 			let e = new endpoint.Endpoint();
