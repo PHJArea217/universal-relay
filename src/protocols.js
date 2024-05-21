@@ -113,11 +113,15 @@ function parse_pp1_or_http_header(str) {
 		case 'connect':
 			let e = new endpoint.Endpoint();
 			if (typeof tokens[1] === 'string') {
-				let host = '';
+				let host = [];
 				if (tokens[1][0] === '[') {
 					host = tokens[1].substring(1).split(']:');
 				} else {
-					host = tokens[1].split(':');
+					let host_colon = tokens[1].lastIndexOf(':');
+					if (host_colon >= 0) {
+						host.push(tokens[1].substring(0, host_colon));
+						host.push(tokens[1].substring(host_colon+1));
+					}
 				}
 				if (host.length !== 2) return null;
 				e.setDomain(host[0]);
