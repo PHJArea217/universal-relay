@@ -18,7 +18,7 @@ class Reader {
 		switch (this.mode) {
 			case 1:
 				if (this.bytesLeft <= buf.length) {
-					appendBuf(buf.slice(0, this.bytesLeft));
+					this.appendBuf(buf.slice(0, this.bytesLeft));
 					this.mode = 0;
 					let retval = {found: true, buf: this.tmpBuf.slice(0, this.tmpBufPos), excessBuf: buf.slice(this.bytesLeft)}
 					this.bytesLeft = 0;
@@ -26,7 +26,7 @@ class Reader {
 					this.tmpBufPos = 0;
 					return retval;
 				}
-				appendBuf(buf);
+				this.appendBuf(buf);
 				this.bytesLeft -= buf.length;
 				return null;
 				break;
@@ -34,12 +34,12 @@ class Reader {
 				let indexOfDelim = buf.indexOf(this.charToFind);
 				if (indexOfDelim >= 0) {
 					indexOfDelim++;
-					appendBuf(buf.slice(0, indexOfDelim));
+					this.appendBuf(buf.slice(0, indexOfDelim));
 					let retval = {found: true, buf: this.tmpBuf.slice(0, this.tmpBufPos), excessBuf: buf.slice(indexOfDelim)};
 					this.tmpBufPos = 0;
 					return retval;
 				}
-				appendBuf(buf);
+				this.appendBuf(buf);
 				break;
 		}
 		return null;

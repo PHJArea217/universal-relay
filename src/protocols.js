@@ -1,6 +1,6 @@
 const common_promises = require('./common_promises.js');
 const endpoint = require('./endpoint.js');
-const Reader = require('./reader.js');
+const _reader = require('./reader.js');
 async function get_pp2_header_x(s) {
 	let targetLength = 0;
 	let b = Buffer.from([]);
@@ -28,7 +28,7 @@ async function get_pp2_header_x(s) {
 	// throw new Error();
 }
 async function read_until_empty(s) {
-	let reader = new reader.Reader(4);
+	let reader = new _reader.Reader(4);
 	reader.mode = 2;
 	reader.charToFind = 0x0a /* (newline) */
 	while (true) {
@@ -46,7 +46,7 @@ async function read_until_empty(s) {
 	}
 }
 async function get_proxy_header(s) {
-	let reader = new reader.Reader(400);
+	let reader = new _reader.Reader(400);
 	reader.mode = 2;
 	reader.charToFind = 0x0a /* (newline) */
 	while (true) {
@@ -68,6 +68,7 @@ async function get_proxy_header(s) {
 					return {string: text};
 				} else if (x.startsWith('proxy ')) {
 					/* PROXY protocol v1 */
+					/* Make sure the header is not truncated */
 					if (result.buf.length >= 400) return null;
 					return {string: text};
 				}
