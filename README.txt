@@ -14,3 +14,15 @@ uint8_t ip[16];
 uint32_t reserved[2];
 } __attribute__((packed));
 This mode was added because connecting to a domain name on the port 8082 server with only the port 8081 "reinjection" socket would have required two Proxy Protocol v2 headers, and was therefore difficult to support in u-relay-tproxy.
+
+TODO:
+
+* Use mysql tables to store relay_map, dns_map, etc. as well as dynamic ip->domain map.
+
+CREATE TABLE urelay_relay_map (id INTEGER PRIMARY KEY AUTO_INCREMENT, domain VARCHAR(255), idx UNSIGNED INT, UNIQUE KEY (domain), UNIQUE KEY (idx));
+CREATE TABLE urelay_dyn_relay_map (id_ip UNSIGNED INTEGER PRIMARY KEY AUTO_INCREMENT, domain VARCHAR(255), UNIQUE KEY (domain));
+urelay_dyn_relay_map range is :5f0:0000:0000:0000 -> :5f7:ffff:ffff:ffff
+
+A smaller range here is fine, because unlike with the old dynamic map, we don't really have much of the concerns about key collisions every time Universal Relay is restarted.
+Upper 19 bits: configurable "generation" or "group" value.
+Lower 32 bits = numeric value of id_ip;
