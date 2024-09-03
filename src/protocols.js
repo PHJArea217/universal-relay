@@ -144,8 +144,8 @@ function parse_pp1_or_http_header(str) {
 					if (tokens.length < 6) return null;
 					rep.setIPStringWithScope(tokens[2]);
 					lep.setIPStringWithScope(tokens[3]);
-					rep.setPort(Number(tokens[2]));
-					lep.setPort(Number(tokens[3]));
+					rep.setPort(Number(tokens[4]));
+					lep.setPort(Number(tokens[5]));
 					return {remoteEndpoint: rep, localEndpoint: lep};
 			}
 	}
