@@ -26,3 +26,5 @@ urelay_dyn_relay_map range is :5f0:0000:0000:0000 -> :5f7:ffff:ffff:ffff
 A smaller range here is fine, because unlike with the old dynamic map, we don't really have much of the concerns about key collisions every time Universal Relay is restarted.
 Upper 19 bits: configurable "generation" or "group" value.
 Lower 32 bits = numeric value of id_ip;
+
+* replace ip module with napi inet_aton/inet_pton/inet_ntop/[0,1,2,3,4,5,6,7].map(i=>dataview.readUint16(2*i).toString(16)).join(':')

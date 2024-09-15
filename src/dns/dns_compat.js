@@ -1,4 +1,5 @@
 const ip = require('ip');
+const domain_name = require('./domain_name.js');
 const dns_types = require('./dns_types.js');
 exports.convert_pdns = function(options, qtype_content) {
 	if (typeof qtype_content === 'string') {
