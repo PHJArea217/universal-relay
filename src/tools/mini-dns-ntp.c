@@ -49,6 +49,7 @@ int main(int argc, char **argv) {
 		ssize_t s = recvmsg(fd, &mh, 0);
 		if (s <= 0) {
 			switch (errno) {
+				case 0:
 				case EINTR:
 				case EAGAIN:
 					continue;
